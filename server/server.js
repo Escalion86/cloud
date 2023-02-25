@@ -27,8 +27,10 @@ app.use(
     ], // you can change the headers
     // exposedHeaders: ['authorization'], // you can change the headers
     origin: [
-      'www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'http://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'http://xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'https://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'https://xn--80aaennmesfbiiz1a7a.xn--p1ai',
       'escalioncloud.ru',
       'www.escalioncloud.ru',
       'http://localhost:3000',
