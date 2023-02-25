@@ -13,22 +13,27 @@ require('dotenv').config()
 var app = express()
 app.use(
   cors({
-    allowedHeaders: [
-      'authorization',
-      'Access-Control-Allow-Headers',
-      'Access-Control-Allow-Origin',
-      'Access-Control-Request-Method',
-      'Access-Control-Request-Headers',
-      'Origin',
-      'Cache-Control',
-      'Content-Type',
-      'X-Token',
-      'X-Refresh-Token',
-    ], // you can change the headers
-    exposedHeaders: ['authorization'], // you can change the headers
-    origin: '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    preflightContinue: false,
+    // allowedHeaders: [
+    //   'authorization',
+    //   'Access-Control-Allow-Headers',
+    //   'Access-Control-Allow-Origin',
+    //   'Access-Control-Request-Method',
+    //   'Access-Control-Request-Headers',
+    //   'Origin',
+    //   'Cache-Control',
+    //   'Content-Type',
+    //   'X-Token',
+    //   'X-Refresh-Token',
+    // ], // you can change the headers
+    // exposedHeaders: ['authorization'], // you can change the headers
+    origin: [
+      'www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'escalioncloud.ru',
+      'www.escalioncloud.ru',
+    ],
+    // methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    // preflightContinue: false,
   })
 ) // Allows incoming requests from any I
 
@@ -41,17 +46,17 @@ const storage = multer.diskStorage({
     const { project, folder, password } = req.body
     console.log('project', project)
     console.log('folder', folder)
-    console.log('password', password)
-    console.log('process.env.PASSWORD', process.env.PASSWORD)
-    if (!!password && password === process.env.PASSWORD) {
-      path = `${project}/${folder}`
-      const serverPath = `${__dirname}/../client/uploads/${path}`
-      // console.log('req.headers', req.headers)
-      fs.mkdirSync(serverPath, { recursive: true })
-      callback(null, serverPath)
-    } else {
-      callback('Wrong password')
-    }
+    // console.log('password', password)
+    // console.log('process.env.PASSWORD', process.env.PASSWORD)
+    // if (!!password && password === process.env.PASSWORD) {
+    path = `${project}/${folder}`
+    const serverPath = `${__dirname}/../client/uploads/${path}`
+    // console.log('req.headers', req.headers)
+    fs.mkdirSync(serverPath, { recursive: true })
+    callback(null, serverPath)
+    // } else {
+    //   callback('Wrong password')
+    // }
   },
   // Sets file(s) to be saved in uploads folder in same directory
   filename: function (req, file, callback) {
