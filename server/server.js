@@ -19,8 +19,8 @@ const storage = multer.diskStorage({
     console.log('password', password)
     console.log('process.env.PASSWORD', process.env.PASSWORD)
     if (!!password && password === process.env.PASSWORD) {
-      path = `../client/uploads/${project}/${folder}`
-      const serverPath = `${__dirname}/${path}`
+      path = `${project}/${folder}`
+      const serverPath = `${__dirname}/../client/uploads/${path}`
       // console.log('req.headers', req.headers)
       fs.mkdirSync(serverPath, { recursive: true })
       callback(null, serverPath)
