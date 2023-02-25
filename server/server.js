@@ -14,7 +14,8 @@ var path
 const storage = multer.diskStorage({
   destination: function (req, file, callback) {
     const { project, folder, password } = req.body
-
+    console.log('password', password)
+    console.log('process.env.PASSWORD', process.env.PASSWORD)
     if (!!password && password === process.env.PASSWORD) {
       path = `../client/uploads/${project}/${folder}`
       const serverPath = `${__dirname}/${path}`
@@ -37,15 +38,15 @@ const storage = multer.diskStorage({
 const upload = multer({ storage })
 
 // app.get('*', function (req, res) {
-//   const protocol = req.protocol;
-//   const host = req.hostname;
-//   const url = req.originalUrl;
-//   const port = process.env.PORT || PORT;
+//   const protocol = req.protocol
+//   const host = req.hostname
+//   const url = req.originalUrl
+//   const port = process.env.PORT || PORT
 
 //   const fullUrl = `${protocol}://${host}:${port}${url}`
 
-//   const responseString = `Full URL is: ${fullUrl}`;
-//   res.send(responseString);
+//   const responseString = `Full URL is: ${fullUrl}`
+//   res.send(responseString)
 // })
 
 app.post('/api', upload.array('files'), (req, res) => {
