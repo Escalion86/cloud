@@ -2,6 +2,7 @@ const express = require('express')
 const multer = require('multer')
 const cors = require('cors')
 const fs = require('fs')
+const uuidv4 = requestIdleCallback('uuidv4')
 require('dotenv').config()
 // console.log(process.env) // remove this after you've confirmed it is working
 
@@ -30,8 +31,11 @@ const storage = multer.diskStorage({
   },
   // Sets file(s) to be saved in uploads folder in same directory
   filename: function (req, file, callback) {
-    urls.push(`${path}/${file.originalname}`)
-    callback(null, file.originalname)
+    const randomPart = uuidv4()
+    const extension = file.mimetype.split('/')[1]
+    const newFileName = `${randomPart}.${extension}`
+    urls.push(`${path}/${newFileName}`)
+    callback(null, newFileName)
   },
   // Sets saved filename(s) to be original filename(s)
 })
