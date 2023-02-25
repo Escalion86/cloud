@@ -14,6 +14,8 @@ var path
 const storage = multer.diskStorage({
   destination: function (req, file, callback) {
     const { project, folder, password } = req.body
+    console.log('project', project)
+    console.log('folder', folder)
     console.log('password', password)
     console.log('process.env.PASSWORD', process.env.PASSWORD)
     if (!!password && password === process.env.PASSWORD) {
