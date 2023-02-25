@@ -63,7 +63,7 @@ app.post('/api', upload.array('files'), (req, res) => {
   // console.log('req.headers2', req.headers)
   // console.log(req.body) // Logs form body values
   // console.log(req.files) // Logs any files
-  res.json(urls.map((url) => `${domain}:82/uploads/${url}`))
+  res.json(urls.map((url) => `${domain}:81/uploads/${url}`))
   // res.json(true)
 })
 
