@@ -5,30 +5,33 @@ const fs = require('fs')
 const { v4: uuidv4 } = require('uuid')
 require('dotenv').config()
 // console.log(process.env) // remove this after you've confirmed it is working
+// var corsOptions = {
+//   origin: 'http://example.com',
+//   optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+// }
 
 var app = express()
 app.use(
-  cors(
-    cors({
-      allowedHeaders: [
-        'authorization',
-        'Access-Control-Allow-Headers',
-        'Access-Control-Allow-Origin',
-        'Access-Control-Request-Method',
-        'Access-Control-Request-Headers',
-        'Origin',
-        'Cache-Control',
-        'Content-Type',
-        'X-Token',
-        'X-Refresh-Token',
-      ], // you can change the headers
-      exposedHeaders: ['authorization'], // you can change the headers
-      origin: '*',
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-      preflightContinue: false,
-    })
-  )
+  cors({
+    allowedHeaders: [
+      'authorization',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Request-Method',
+      'Access-Control-Request-Headers',
+      'Origin',
+      'Cache-Control',
+      'Content-Type',
+      'X-Token',
+      'X-Refresh-Token',
+    ], // you can change the headers
+    exposedHeaders: ['authorization'], // you can change the headers
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    preflightContinue: false,
+  })
 ) // Allows incoming requests from any I
+
 var path
 var urls = []
 
