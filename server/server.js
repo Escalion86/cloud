@@ -64,7 +64,7 @@ app.post('/api', upload.array('files'), (req, res) => {
   // console.log(req.body) // Logs form body values
   // console.log(req.files) // Logs any files
   const urlsToSend = urls.map((url) => `${domain}:81/uploads/${url}`)
-  const urls = []
+  urls = []
   res.json(urlsToSend)
   // res.json(true)
 })
