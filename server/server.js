@@ -52,18 +52,20 @@ const upload = multer({ storage })
 // })
 
 app.post('/api', upload.array('files'), (req, res) => {
-  console.log('req.body', req.body)
-  const protocol = req.protocol
-  const host = req.hostname
+  // console.log('req.body', req.body)
+  // const protocol = req.protocol
+  // const host = req.hostname
   // const url = req.originalUrl
   // const port = process.env.PORT || PORT
 
-  const domain = `${protocol}://${host}`
+  // const domain = `${protocol}://${host}`
   // Sets multer to intercept files named "files" on uploaded form data
   // console.log('req.headers2', req.headers)
   // console.log(req.body) // Logs form body values
   // console.log(req.files) // Logs any files
-  const urlsToSend = urls.map((url) => `${domain}:81/uploads/${url}`)
+  const urlsToSend = urls.map(
+    (url) => `https://escalioncloud.ru/uploads/${url}`
+  )
   urls = []
   res.json(urlsToSend)
   // res.json(true)
