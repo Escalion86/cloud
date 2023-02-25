@@ -2,7 +2,7 @@ const express = require('express')
 const multer = require('multer')
 const cors = require('cors')
 const fs = require('fs')
-const uuidv4 = requestIdleCallback('uuidv4')
+const uuidv4 = require('uuidv4')
 require('dotenv').config()
 // console.log(process.env) // remove this after you've confirmed it is working
 
