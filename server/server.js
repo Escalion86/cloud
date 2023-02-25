@@ -51,7 +51,7 @@ const upload = multer({ storage })
 //   res.send(responseString)
 // })
 
-app.post('/api', upload.array('files'), (req, res) => {
+app.post('/api', upload.single('files'), (req, res) => {
   console.log('req.body', req.body)
   const protocol = req.protocol
   const host = req.hostname
