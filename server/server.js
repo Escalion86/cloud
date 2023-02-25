@@ -7,8 +7,8 @@ require('dotenv').config()
 
 var app = express()
 app.use(cors()) // Allows incoming requests from any I
-var urls = []
 var path
+var urls = []
 
 // Start by creating some disk storage options:
 const storage = multer.diskStorage({
@@ -51,7 +51,7 @@ const upload = multer({ storage })
 //   res.send(responseString)
 // })
 
-app.post('/api', upload.single('files'), (req, res) => {
+app.post('/api', upload.array('files'), (req, res) => {
   console.log('req.body', req.body)
   const protocol = req.protocol
   const host = req.hostname
@@ -63,7 +63,9 @@ app.post('/api', upload.single('files'), (req, res) => {
   // console.log('req.headers2', req.headers)
   // console.log(req.body) // Logs form body values
   // console.log(req.files) // Logs any files
-  res.json(urls.map((url) => `${domain}:81/uploads/${url}`))
+  const urlsToSend = urls.map((url) => `${domain}:81/uploads/${url}`)
+  const urls = []
+  res.json(urlsToSend)
   // res.json(true)
 })
 
