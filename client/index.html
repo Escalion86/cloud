@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <form>
+      <input type="text" name="project" id="project" />
+      <input type="text" name="folder" id="folder" />
+      <input type="text" name="password" id="password" />
+      <input type="file" name="file" id="files" multiple />
+      <button type="submit">Submit</button>
+    </form>
+    <script>
+      const form = document.querySelector('form')
+      form.addEventListener('submit', (e) => {
+        e.preventDefault()
+        // Prevents HTML handling submission
+        const project = document.getElementById('project')
+        const folder = document.getElementById('folder')
+        const files = document.getElementById('files')
+        const password = document.getElementById('password')
+        const formData = new FormData()
+        // Creates empty formData object
+        formData.append('project', project.value)
+        formData.append('folder', folder.value)
+        formData.append('files', files.value)
+        formData.append('password', password.value)
+        // Appends value of text input
+        for (let i = 0; i < files.files.length; i++) {
+          formData.append('files', files.files[i])
+        }
+
+        console.log('...formData', ...formData)
+        // Appends value(s) of file input
+        // Post data to Node and Express server:
+        fetch('http://127.0.0.1:5000/api', {
+          method: 'POST',
+          body: formData, // Payload is formData object
+        })
+          .then((res) => res.json())
+          .then((data) => console.log(data))
+      })
+    </script>
+  </body>
+</html>
