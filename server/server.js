@@ -7,7 +7,28 @@ require('dotenv').config()
 // console.log(process.env) // remove this after you've confirmed it is working
 
 var app = express()
-app.use(cors()) // Allows incoming requests from any I
+app.use(
+  cors(
+    cors({
+      allowedHeaders: [
+        'authorization',
+        'Access-Control-Allow-Headers',
+        'Access-Control-Allow-Origin',
+        'Access-Control-Request-Method',
+        'Access-Control-Request-Headers',
+        'Origin',
+        'Cache-Control',
+        'Content-Type',
+        'X-Token',
+        'X-Refresh-Token',
+      ], // you can change the headers
+      exposedHeaders: ['authorization'], // you can change the headers
+      origin: '*',
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      preflightContinue: false,
+    })
+  )
+) // Allows incoming requests from any I
 var path
 var urls = []
 
