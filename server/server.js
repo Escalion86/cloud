@@ -13,18 +13,18 @@ require('dotenv').config()
 var app = express()
 app.use(
   cors({
-    // allowedHeaders: [
-    //   'authorization',
-    //   'Access-Control-Allow-Headers',
-    //   'Access-Control-Allow-Origin',
-    //   'Access-Control-Request-Method',
-    //   'Access-Control-Request-Headers',
-    //   'Origin',
-    //   'Cache-Control',
-    //   'Content-Type',
-    //   'X-Token',
-    //   'X-Refresh-Token',
-    // ], // you can change the headers
+    allowedHeaders: [
+      // 'authorization',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Origin',
+      // 'Access-Control-Request-Method',
+      // 'Access-Control-Request-Headers',
+      // 'Origin',
+      // 'Cache-Control',
+      // 'Content-Type',
+      // 'X-Token',
+      // 'X-Refresh-Token',
+    ], // you can change the headers
     // exposedHeaders: ['authorization'], // you can change the headers
     origin: [
       'www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
