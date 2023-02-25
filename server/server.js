@@ -31,6 +31,7 @@ app.use(
       'xn--80aaennmesfbiiz1a7a.xn--p1ai',
       'escalioncloud.ru',
       'www.escalioncloud.ru',
+      'localhost:3000',
     ],
     // methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     // preflightContinue: false,
