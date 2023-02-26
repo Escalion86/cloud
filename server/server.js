@@ -73,7 +73,8 @@ const storage = multer.diskStorage({
 })
 
 // Set saved storage options:
-const upload = multer({ storage })
+var maxSize = 100 * 1024 * 1024 * 1024
+const upload = multer({ storage, limits: { fileSize: maxSize } })
 
 // app.get('*', function (req, res) {
 //   const protocol = req.protocol
