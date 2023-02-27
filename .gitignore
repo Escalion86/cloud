@@ -2,8 +2,8 @@
 
 # dependencies
 /server/node_modules
-/server/node_modules
 /client/uploads
+/client/temp
 
 # local env files
 /server/.env
