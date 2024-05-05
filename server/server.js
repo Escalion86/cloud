@@ -42,8 +42,8 @@ app.use(
       'www.escalioncloud.ru',
       'http://localhost:3000',
     ],
-    // methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    // preflightContinue: false,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    preflightContinue: true,
   })
 ) // Allows incoming requests from any I
 
