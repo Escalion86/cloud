@@ -16,18 +16,18 @@ require('dotenv').config()
 var app = express()
 app.use(
   cors({
-    allowedHeaders: [
-      // 'authorization',
-      'Access-Control-Allow-Headers',
-      'Access-Control-Allow-Origin',
-      // 'Access-Control-Request-Method',
-      // 'Access-Control-Request-Headers',
-      // 'Origin',
-      // 'Cache-Control',
-      // 'Content-Type',
-      // 'X-Token',
-      // 'X-Refresh-Token',
-    ], // you can change the headers
+    // allowedHeaders: [
+    //   // 'authorization',
+    //   'Access-Control-Allow-Headers',
+    //   'Access-Control-Allow-Origin',
+    //   // 'Access-Control-Request-Method',
+    //   // 'Access-Control-Request-Headers',
+    //   // 'Origin',
+    //   // 'Cache-Control',
+    //   'Content-Type',
+    //   // 'X-Token',
+    //   // 'X-Refresh-Token',
+    // ], // you can change the headers
     // exposedHeaders: ['authorization'], // you can change the headers
     origin: [
       'http://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
@@ -42,15 +42,15 @@ app.use(
       'www.escalioncloud.ru',
       'http://localhost:3000',
     ],
-    headers: [
-      'Origin',
-      'X-Requested-With',
-      'Content-Type',
-      'Accept',
-      'Access-Control-Allow-Headers',
-      'Access-Control-Allow-Origin',
-    ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    // headers: [
+    //   'Origin',
+    //   'X-Requested-With',
+    //   'Content-Type',
+    //   'Accept',
+    //   'Access-Control-Allow-Headers',
+    //   'Access-Control-Allow-Origin',
+    // ],
+    // methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     // preflightContinue: true,
   })
 ) // Allows incoming requests from any I
