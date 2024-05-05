@@ -52,7 +52,7 @@ app.use(
       'Access-Control-Allow-Origin',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    // preflightContinue: true,
+    preflightContinue: true,
   })
 ) // Allows incoming requests from any I
 
