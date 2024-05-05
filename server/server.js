@@ -42,6 +42,7 @@ app.use(
       'www.escalioncloud.ru',
       'http://localhost:3000',
     ],
+    headers: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     preflightContinue: true,
   })
