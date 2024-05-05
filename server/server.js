@@ -131,6 +131,18 @@ const upload = multer({ storage, limits: { fileSize: maxSize } })
 //       }
 //   }
 
+app.get('/api/files', (req, res) => {
+  const directory = req.query.directory
+  const directoryPath = `${__dirname}/../client/uploads/${directory}` // Specify the directory path here
+  fs.readdir(directoryPath, (err, files) => {
+    if (err) {
+      res.status(500).send('Error reading directory')
+      return
+    }
+    res.json(files)
+  })
+})
+
 app.post('/api', upload.single('files'), async (req, res) => {
   // console.log('req.body', req.body)
   // const protocol = req.protocol
