@@ -43,15 +43,15 @@ app.use(
       'www.escalioncloud.ru',
       'http://localhost:3000',
     ],
-    headers: [
-      'Origin',
-      // 'X-Requested-With',
-      'Content-Type',
-      'Accept',
-      'Access-Control-Allow-Headers',
-      'Access-Control-Allow-Origin',
-    ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    // headers: [
+    //   'Origin',
+    //   // 'X-Requested-With',
+    //   'Content-Type',
+    //   'Accept',
+    //   'Access-Control-Allow-Headers',
+    //   'Access-Control-Allow-Origin',
+    // ],
+    // methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     preflightContinue: true,
   })
 ) // Allows incoming requests from any I
