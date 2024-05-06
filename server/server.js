@@ -164,6 +164,7 @@ app.post('/api/files', (req, res) => {
   const directory = req.query.directory
   console.log('directory :>> ', directory)
   const directoryPath = `${__dirname}/../client/uploads/${directory}` // Specify the directory path here
+  console.log('directoryPath :>> ', directoryPath)
   fs.readdir(directoryPath, (err, files) => {
     if (err) {
       res.status(500).send('Error reading directory')
