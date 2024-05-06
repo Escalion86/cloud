@@ -15,66 +15,66 @@ require('dotenv').config()
 
 var app = express()
 
-app.use((req, res, next) => {
-  const actualOrigin = req.headers.origin
-  if (['Content-Type'].includes(actualOrigin)) {
-    res.setHeader('Access-Control-Allow-Origin', actualOrigin)
-  } else {
-    return res.status(403).send('Unauthorized Origin')
-  }
-  res.setHeader(
-    'Access-Control-Allow-Methods',
-    'GET,POST,PATCH,DELETE,OPTIONS,PUT'
-  )
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200)
-  } else {
-    next()
-  }
-})
+// app.use((req, res, next) => {
+//   const actualOrigin = req.headers.origin
+//   if (['Content-Type'].includes(actualOrigin)) {
+//     res.setHeader('Access-Control-Allow-Origin', actualOrigin)
+//   } else {
+//     return res.status(403).send('Unauthorized Origin')
+//   }
+//   res.setHeader(
+//     'Access-Control-Allow-Methods',
+//     'GET,POST,PATCH,DELETE,OPTIONS,PUT'
+//   )
+//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+//   if (req.method === 'OPTIONS') {
+//     res.sendStatus(200)
+//   } else {
+//     next()
+//   }
+// })
 
-// app.use(
-//   cors({
-//     allowedHeaders: [
-//       // 'authorization',
-//       'Access-Control-Allow-Headers',
-//       'Access-Control-Allow-Origin',
-//       'Access-Control-Request-Method',
-//       'Access-Control-Request-Headers',
-//       'Accept',
-//       'Origin',
-//       'Cache-Control',
-//       'Content-Type',
-//       // 'X-Token',
-//       // 'X-Refresh-Token',
-//     ], // you can change the headers
-//     // exposedHeaders: ['authorization'], // you can change the headers
-//     origin: [
-//       'http://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-//       'http://xn--80aaennmesfbiiz1a7a.xn--p1ai',
-//       'https://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-//       'https://xn--80aaennmesfbiiz1a7a.xn--p1ai',
-//       'http://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-//       'http://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-//       'https://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-//       'https://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-//       'escalioncloud.ru',
-//       'www.escalioncloud.ru',
-//       'http://localhost:3000',
-//     ],
-//     // headers: [
-//     //   'Origin',
-//     //   // 'X-Requested-With',
-//     //   'Content-Type',
-//     //   'Accept',
-//     //   'Access-Control-Allow-Headers',
-//     //   'Access-Control-Allow-Origin',
-//     // ],
-//     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-//     preflightContinue: true,
-//   })
-// ) // Allows incoming requests from any I
+app.use(
+  cors({
+    allowedHeaders: [
+      // 'authorization',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Request-Method',
+      'Access-Control-Request-Headers',
+      'Accept',
+      'Origin',
+      'Cache-Control',
+      'Content-Type',
+      // 'X-Token',
+      // 'X-Refresh-Token',
+    ], // you can change the headers
+    // exposedHeaders: ['authorization'], // you can change the headers
+    origin: [
+      'http://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'http://xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'https://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'https://xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'http://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'http://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'https://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'https://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'escalioncloud.ru',
+      'www.escalioncloud.ru',
+      'http://localhost:3000',
+    ],
+    // headers: [
+    //   'Origin',
+    //   // 'X-Requested-With',
+    //   'Content-Type',
+    //   'Accept',
+    //   'Access-Control-Allow-Headers',
+    //   'Access-Control-Allow-Origin',
+    // ],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    preflightContinue: true,
+  })
+) // Allows incoming requests from any I
 
 app.use(function (err, req, res, next) {
   console.error(err.stack)
