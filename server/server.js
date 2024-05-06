@@ -160,7 +160,7 @@ const upload = multer({ storage, limits: { fileSize: maxSize } })
 //       }
 //   }
 
-app.get('/api/files', (req, res) => {
+app.post('/api/files', (req, res) => {
   const directory = req.query.directory
   const directoryPath = `${__dirname}/../client/uploads/${directory}` // Specify the directory path here
   fs.readdir(directoryPath, (err, files) => {
