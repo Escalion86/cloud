@@ -17,7 +17,7 @@ var app = express()
 
 app.use((req, res, next) => {
   const actualOrigin = req.headers.origin
-  if (originArray.includes(actualOrigin)) {
+  if (['Content-Type'].includes(actualOrigin)) {
     res.setHeader('Access-Control-Allow-Origin', actualOrigin)
   } else {
     return res.status(403).send('Unauthorized Origin')
