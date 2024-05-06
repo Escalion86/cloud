@@ -162,6 +162,7 @@ const upload = multer({ storage, limits: { fileSize: maxSize } })
 
 app.post('/api/files', (req, res) => {
   const directory = req.query.directory
+  console.log('directory :>> ', directory)
   const directoryPath = `${__dirname}/../client/uploads/${directory}` // Specify the directory path here
   fs.readdir(directoryPath, (err, files) => {
     if (err) {
