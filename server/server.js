@@ -14,47 +14,61 @@ require('dotenv').config()
 // }
 
 var app = express()
-app.use(
-  cors({
-    allowedHeaders: [
-      // 'authorization',
-      'Access-Control-Allow-Headers',
-      'Access-Control-Allow-Origin',
-      'Access-Control-Request-Method',
-      'Access-Control-Request-Headers',
-      'Accept',
-      'Origin',
-      'Cache-Control',
-      'Content-Type',
-      // 'X-Token',
-      // 'X-Refresh-Token',
-    ], // you can change the headers
-    // exposedHeaders: ['authorization'], // you can change the headers
-    origin: [
-      'http://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'http://xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'https://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'https://xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'http://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'http://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'https://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'https://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'escalioncloud.ru',
-      'www.escalioncloud.ru',
-      'http://localhost:3000',
-    ],
-    // headers: [
-    //   'Origin',
-    //   // 'X-Requested-With',
-    //   'Content-Type',
-    //   'Accept',
-    //   'Access-Control-Allow-Headers',
-    //   'Access-Control-Allow-Origin',
-    // ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    preflightContinue: true,
-  })
-) // Allows incoming requests from any I
+
+const corsOptions = {
+  optionsSuccessStatus: 200,
+  origin: function (origin, callback) {
+    if (originArray.includes(origin) || !origin) {
+      callback(null, true)
+    } else {
+      callback(new Error('unauthorized Origin'))
+    }
+  },
+}
+
+app.use(cors(corsOptions))
+
+// app.use(
+//   cors({
+//     allowedHeaders: [
+//       // 'authorization',
+//       'Access-Control-Allow-Headers',
+//       'Access-Control-Allow-Origin',
+//       'Access-Control-Request-Method',
+//       'Access-Control-Request-Headers',
+//       'Accept',
+//       'Origin',
+//       'Cache-Control',
+//       'Content-Type',
+//       // 'X-Token',
+//       // 'X-Refresh-Token',
+//     ], // you can change the headers
+//     // exposedHeaders: ['authorization'], // you can change the headers
+//     origin: [
+//       'http://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+//       'http://xn--80aaennmesfbiiz1a7a.xn--p1ai',
+//       'https://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+//       'https://xn--80aaennmesfbiiz1a7a.xn--p1ai',
+//       'http://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+//       'http://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+//       'https://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+//       'https://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+//       'escalioncloud.ru',
+//       'www.escalioncloud.ru',
+//       'http://localhost:3000',
+//     ],
+//     // headers: [
+//     //   'Origin',
+//     //   // 'X-Requested-With',
+//     //   'Content-Type',
+//     //   'Accept',
+//     //   'Access-Control-Allow-Headers',
+//     //   'Access-Control-Allow-Origin',
+//     // ],
+//     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+//     preflightContinue: true,
+//   })
+// ) // Allows incoming requests from any I
 
 app.use(function (err, req, res, next) {
   console.error(err.stack)
