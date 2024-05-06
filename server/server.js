@@ -20,11 +20,11 @@ app.use(
       // 'authorization',
       'Access-Control-Allow-Headers',
       'Access-Control-Allow-Origin',
-      // 'Access-Control-Request-Method',
-      // 'Access-Control-Request-Headers',
+      'Access-Control-Request-Method',
+      'Access-Control-Request-Headers',
       'Accept',
       'Origin',
-      // 'Cache-Control',
+      'Cache-Control',
       'Content-Type',
       // 'X-Token',
       // 'X-Refresh-Token',
@@ -51,7 +51,7 @@ app.use(
     //   'Access-Control-Allow-Headers',
     //   'Access-Control-Allow-Origin',
     // ],
-    // methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     preflightContinue: true,
   })
 ) // Allows incoming requests from any I
