@@ -165,17 +165,22 @@ app.get('/api/files', (req, res) => {
   const noFolders = req.query.noFolders
   console.log('req.query :>> ', req.query)
   const directoryPath = `${__dirname}/../client/uploads/${directory}` // Specify the directory path here
-  fs.readdir(directoryPath, (err, files) => {
-    if (err) {
-      res.status(500).send('Error reading directory')
-      return
-    }
-    if (noFolders)
-      res.json(
-        files.filter((file) => fs.statSync(`${directoryPath}/${file}`).isFile())
-      )
-    else res.json(files)
-  })
+  if (fs.existsSync(directoryPath))
+    fs.readdir(directoryPath, (err, files) => {
+      if (err) {
+        res.status(500).send('Error reading directory')
+        // res.json([])
+        return
+      }
+      if (noFolders)
+        res.json(
+          files.filter((file) =>
+            fs.statSync(`${directoryPath}/${file}`).isFile()
+          )
+        )
+      else res.json(files)
+    })
+  else res.json([])
 })
 
 app.post('/api', upload.single('files'), async (req, res) => {
