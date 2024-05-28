@@ -183,6 +183,23 @@ app.get('/api/files', (req, res) => {
   else res.json([])
 })
 
+app.get('/api/deletefile', (req, res) => {
+  const filePath = req.query.filePath
+
+  const directoryFilePath = `${__dirname}/../client/uploads/${filePath}` // Specify the directory path here
+  if (fs.existsSync(directoryFilePath)) {
+    fs.unlink(directoryFilePath, function (err) {
+      if (err) {
+        res.status(500).send('Error reading filePath')
+        return
+        // throw err;
+      }
+      console.log('File deleted!')
+      res.json({ status: 'ok', message: 'File deleted!' })
+    })
+  }
+})
+
 app.post('/api', upload.single('files'), async (req, res) => {
   // console.log('req.body', req.body)
   // const protocol = req.protocol
@@ -190,13 +207,23 @@ app.post('/api', upload.single('files'), async (req, res) => {
   // const url = req.originalUrl
   // const port = process.env.PORT || PORT
 
+  // formData.append('password', 'cloudtest')
+
+  // ------This from client ------
+  // formData.append('project', project ?? 'polovinka_uspeha')
+  // formData.append('folder', folder ?? 'temp')
+  // formData.append('fileType', 'file')
+  // formData.append('files', file)
+  // formData.append('fileName', fileName)
+  // -----------------------------
+
   // const domain = `${protocol}://${host}`
   // Sets multer to intercept files named "files" on uploaded form data
   // console.log('req.headers2', req.headers)
   // console.log(req.body) // Logs form body values
   // console.log(req.files) // Logs any files
   // await imageUpload(req)
-  const { filename: image } = req.file
+  const { filename } = req.file
   // sharp.cache(false)
   // console.log('req.file.destination', req.file.destination)
   await sharp(req.file.path)
@@ -206,7 +233,7 @@ app.post('/api', upload.single('files'), async (req, res) => {
     })
     .jpeg({ quality: 90 })
     .toFile(
-      path.resolve(req.file.destination, '../uploads/', pathFolder, image)
+      path.resolve(req.file.destination, '../uploads/', pathFolder, filename)
     )
   fs.unlinkSync(req.file.path)
 
