@@ -59,6 +59,8 @@ app.use(
       'http://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
       'https://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
       'https://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'https://www.dev.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+      'https://dev.xn--80aaennmesfbiiz1a7a.xn--p1ai',
       'escalioncloud.ru',
       'www.escalioncloud.ru',
       'http://localhost:3000',
