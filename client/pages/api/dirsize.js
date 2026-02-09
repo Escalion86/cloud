@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   }
 
   const { directory } = req.query || {}
-  if (!directory) {
+  if (typeof directory === 'undefined') {
     res.status(400).json({ message: 'directory is required' })
     return
   }

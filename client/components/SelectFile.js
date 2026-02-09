@@ -66,6 +66,8 @@ const SelectFile = ({
   const [error, setError] = useState('')
   const [folderSizes, setFolderSizes] = useState({})
   const [folderLoading, setFolderLoading] = useState({})
+  const [totalSize, setTotalSize] = useState(null)
+  const [totalLoading, setTotalLoading] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -122,6 +124,11 @@ const SelectFile = ({
     }
   }, [directory, refreshKey, setFilesCount])
 
+  useEffect(() => {
+    setTotalSize(null)
+    setTotalLoading(false)
+  }, [directory, refreshKey])
+
   if (isLoading) {
     return (
       <div className="py-6 text-center text-sm text-slate-500">Загрузка...</div>
@@ -140,15 +147,50 @@ const SelectFile = ({
     )
   }
 
-  return (
-    <div
-      className={
-        viewMode === 'table'
-          ? 'flex flex-col gap-2'
-          : 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+  const folders = items.filter((item) => !item.isFile)
+  const allFoldersComputed =
+    folders.length === 0 ||
+    folders.every((item) => typeof folderSizes[item.fullPath] === 'number')
+  const hasFolderErrors = folders.some(
+    (item) => folderSizes[item.fullPath] === -1
+  )
+  const computedTotal =
+    allFoldersComputed && !hasFolderErrors
+      ? items.reduce((sum, item) => {
+          if (item.isFile) return sum + (item.size || 0)
+          return sum + (folderSizes[item.fullPath] || 0)
+        }, 0)
+      : null
+
+  const handleTotalSize = async () => {
+    if (totalLoading) return
+    setTotalLoading(true)
+    try {
+      const response = await fetch(
+        `/api/dirsize?directory=${encodeURIComponent(directory || '')}`
+      )
+      if (!response.ok) {
+        throw new Error('dirsize_failed')
       }
-    >
-      {items.map((item) => {
+      const data = await response.json()
+      setTotalSize(data?.size ?? 0)
+    } catch (err) {
+      setTotalSize(-1)
+    } finally {
+      setTotalLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <div
+        className={
+          viewMode === 'table'
+            ? 'flex flex-col gap-2'
+            : 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+        }
+      >
+        {items.map((item) => {
         const ext = item.name.split('.').pop()?.toLowerCase()
         const isImage = item.isFile && imageExtensions.has(ext)
         const fileUrl = `${filesBaseUrl}/${item.fullPath}`
@@ -359,8 +401,39 @@ const SelectFile = ({
             )}
           </button>
         )
-      })}
-    </div>
+        })}
+      </div>
+      <div className="mt-4 flex items-center justify-end text-xs text-slate-500">
+        {computedTotal !== null ? (
+          <span>
+            Всего размер:{' '}
+            <span className="font-semibold">
+              {formatBytes(computedTotal)}
+            </span>
+          </span>
+        ) : totalSize !== null ? (
+          totalSize >= 0 ? (
+            <span>
+              Всего размер:{' '}
+              <span className="font-semibold">
+                {formatBytes(totalSize)}
+              </span>
+            </span>
+          ) : (
+            <span className="text-rose-600">Ошибка расчета</span>
+          )
+        ) : (
+          <button
+            className="inline-flex cursor-pointer items-center rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            onClick={handleTotalSize}
+            disabled={totalLoading}
+          >
+            {totalLoading ? 'Считаю...' : 'Рассчитать'}
+          </button>
+        )}
+      </div>
+    </>
   )
 }
 

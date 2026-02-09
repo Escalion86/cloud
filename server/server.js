@@ -351,13 +351,15 @@ const getDirectorySize = async (dirPath) => {
 app.get('/api/dirsize', async (req, res) => {
   const directory = req.query.directory
 
-  if (!directory) {
+  if (typeof directory === 'undefined') {
     res.status(400).json({ status: 'error', message: 'directory is required' })
     return
   }
 
   const uploadsRoot = path.resolve(__dirname, '../client/uploads')
-  const targetPath = path.resolve(uploadsRoot, directory)
+  const targetPath = directory
+    ? path.resolve(uploadsRoot, directory)
+    : uploadsRoot
 
   if (!targetPath.startsWith(uploadsRoot)) {
     res.status(400).json({ status: 'error', message: 'Invalid directory' })
