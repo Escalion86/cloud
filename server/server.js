@@ -63,6 +63,10 @@ app.use(
       'https://dev.xn--80aaennmesfbiiz1a7a.xn--p1ai',
       'escalioncloud.ru',
       'www.escalioncloud.ru',
+      'https://artistcrm.ru',
+      'https://www.artistcrm.ru',
+      'https://actquest.ru',
+      'https://www.actquest.ru',
       'http://localhost:3000',
     ],
     // headers: [
@@ -75,7 +79,7 @@ app.use(
     // ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     preflightContinue: true,
-  })
+  }),
 ) // Allows incoming requests from any I
 
 app.use(function (err, req, res, next) {
@@ -87,20 +91,62 @@ var pathFolder
 var urls = []
 
 // Start by creating some disk storage options:
+const mimeExtensionMap = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/svg+xml': 'svg',
+  'image/bmp': 'bmp',
+  'image/tiff': 'tiff',
+  'application/pdf': 'pdf',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+    'pptx',
+}
+
+const normalizeExtension = (file) => {
+  const originalExt = path.extname(file.originalname || '')
+    .replace('.', '')
+    .toLowerCase()
+  if (originalExt) return originalExt
+  return mimeExtensionMap[file.mimetype] || 'bin'
+}
+
+const normalizePathSegment = (value) =>
+  (value || '').toString().replace(/^\/+|\/+$/g, '')
+
+const buildPathFolder = (body) => {
+  const directory = normalizePathSegment(body.directory)
+  if (directory) return directory
+  const project = normalizePathSegment(body.project)
+  const folder = normalizePathSegment(body.folder)
+  return [project, folder].filter(Boolean).join('/')
+}
+
 const storage = multer.diskStorage({
   destination: function (req, file, callback) {
-    const { project, folder, password } = req.body
+    const { password } = req.body
     // console.log('project', project)
     // console.log('folder', folder)
     // console.log('password', password)
     // console.log('process.env.PASSWORD', process.env.PASSWORD)
     // if (!!password && password === process.env.PASSWORD) {
-    pathFolder = `${project}/${folder}`
+    pathFolder = buildPathFolder(req.body)
     const serverPath = `${__dirname}/../client/temp`
     // const serverPath = `${__dirname}/../client/uploads/${pathFolder}`
     // console.log('req.headers', req.headers)
     // fs.mkdirSync(serverPath, { recursive: true })
-    fs.mkdirSync(`${__dirname}/../client/uploads/${pathFolder}`, {
+    const targetDir = pathFolder
+      ? `${__dirname}/../client/uploads/${pathFolder}`
+      : `${__dirname}/../client/uploads`
+    fs.mkdirSync(targetDir, {
       recursive: true,
     })
     callback(null, serverPath)
@@ -111,15 +157,35 @@ const storage = multer.diskStorage({
   // Sets file(s) to be saved in uploads folder in same directory
   filename: function (req, file, callback) {
     const randomPart = uuidv4()
-    const extension = file.mimetype.split('/')[1]
+    const extension = normalizeExtension(file)
     const newFileName = `${randomPart}.${extension}`
-    urls.push(`${pathFolder}/${newFileName}`)
+    const storedPath = pathFolder
+      ? `${pathFolder}/${newFileName}`
+      : newFileName
+    urls.push(storedPath)
     callback(null, newFileName)
   },
   // Sets saved filename(s) to be original filename(s)
 })
 
 // Set saved storage options:
+const docExtensions = new Set([
+  'pdf',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
+])
+
+const getDocMaxBytes = () => {
+  const fallbackMb = 20
+  const parsed = Number.parseFloat(process.env.DOC_MAX_MB)
+  const mb = Number.isFinite(parsed) && parsed > 0 ? parsed : fallbackMb
+  return Math.floor(mb * 1024 * 1024)
+}
+
 var maxSize = 100 * 1024 * 1024 * 1024
 const upload = multer({ storage, limits: { fileSize: maxSize } })
 
@@ -177,8 +243,8 @@ app.get('/api/files', (req, res) => {
       if (noFolders)
         res.json(
           files.filter((file) =>
-            fs.statSync(`${directoryPath}/${file}`).isFile()
-          )
+            fs.statSync(`${directoryPath}/${file}`).isFile(),
+          ),
         )
       else res.json(files)
     })
@@ -200,6 +266,61 @@ app.get('/api/deletefile', (req, res) => {
       res.json({ status: 'ok', message: 'File deleted!' })
     })
   }
+})
+
+app.delete('/api/deletedir', (req, res) => {
+  const directory = req.query.directory
+
+  if (!directory) {
+    res.status(400).json({ status: 'error', message: 'directory is required' })
+    return
+  }
+
+  const uploadsRoot = path.resolve(__dirname, '../client/uploads')
+  const targetPath = path.resolve(uploadsRoot, directory)
+
+  if (!targetPath.startsWith(uploadsRoot)) {
+    res.status(400).json({ status: 'error', message: 'Invalid directory' })
+    return
+  }
+
+  if (!fs.existsSync(targetPath)) {
+    res.status(404).json({ status: 'error', message: 'Directory not found' })
+    return
+  }
+
+  fs.rm(targetPath, { recursive: true, force: true }, (err) => {
+    if (err) {
+      res.status(500).json({ status: 'error', message: 'Error deleting dir' })
+      return
+    }
+    res.json({ status: 'ok', message: 'Directory deleted!' })
+  })
+})
+
+app.post('/api/createdir', (req, res) => {
+  const directory = req.query.directory
+
+  if (!directory) {
+    res.status(400).json({ status: 'error', message: 'directory is required' })
+    return
+  }
+
+  const uploadsRoot = path.resolve(__dirname, '../client/uploads')
+  const targetPath = path.resolve(uploadsRoot, directory)
+
+  if (!targetPath.startsWith(uploadsRoot)) {
+    res.status(400).json({ status: 'error', message: 'Invalid directory' })
+    return
+  }
+
+  fs.mkdir(targetPath, { recursive: true }, (err) => {
+    if (err) {
+      res.status(500).json({ status: 'error', message: 'Error creating dir' })
+      return
+    }
+    res.json({ status: 'ok', message: 'Directory created!' })
+  })
 })
 
 app.post('/api', upload.single('files'), async (req, res) => {
@@ -226,21 +347,45 @@ app.post('/api', upload.single('files'), async (req, res) => {
   // console.log(req.files) // Logs any files
   // await imageUpload(req)
   const { filename } = req.file
-  // sharp.cache(false)
-  // console.log('req.file.destination', req.file.destination)
-  await sharp(req.file.path)
-    .resize(2400, 2400, {
-      fit: 'inside',
-      withoutEnlargement: true,
-    })
-    .jpeg({ quality: 90 })
-    .toFile(
-      path.resolve(req.file.destination, '../uploads/', pathFolder, filename)
-    )
-  fs.unlinkSync(req.file.path)
+  const extension = path.extname(filename).replace('.', '').toLowerCase()
+  const isDocument = docExtensions.has(extension)
+  if (isDocument) {
+    const docLimitBytes = getDocMaxBytes()
+    if (req.file.size > docLimitBytes) {
+      fs.unlinkSync(req.file.path)
+      res.status(413).json({
+        status: 'error',
+        message: 'Файл превышает лимит',
+        maxBytes: docLimitBytes,
+      })
+      return
+    }
+  }
+  const destinationPath = path.resolve(
+    req.file.destination,
+    '../uploads/',
+    pathFolder,
+    filename,
+  )
+  const isImage = req.file.mimetype.startsWith('image/')
+  const canProcessImage = ['jpg', 'jpeg', 'png', 'webp'].includes(extension)
+
+  if (isImage && canProcessImage) {
+    const format = extension === 'jpg' ? 'jpeg' : extension
+    await sharp(req.file.path)
+      .resize(2400, 2400, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .toFormat(format, { quality: 90 })
+      .toFile(destinationPath)
+    fs.unlinkSync(req.file.path)
+  } else {
+    fs.renameSync(req.file.path, destinationPath)
+  }
 
   const urlsToSend = urls.map(
-    (url) => `https://escalioncloud.ru/uploads/${url}`
+    (url) => `https://escalioncloud.ru/uploads/${url}`,
   )
   urls = []
   console.log('urlsToSend', urlsToSend)

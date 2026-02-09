@@ -14,8 +14,10 @@
       <input type="file" name="file" id="files" multiple />
       <button type="submit">Submit</button>
     </form>
+    <div id="status"></div>
     <script>
       const form = document.querySelector('form')
+      const status = document.getElementById('status')
       form.addEventListener('submit', (e) => {
         e.preventDefault()
         // Prevents HTML handling submission
@@ -41,8 +43,22 @@
           method: 'POST',
           body: formData, // Payload is formData object
         })
-          .then((res) => res.json())
-          .then((data) => console.log('res', data))
+          .then(async (res) => {
+            const data = await res.json().catch(() => null)
+            if (!res.ok) {
+              const message = data?.message || 'Ошибка загрузки файла'
+              status.textContent = message
+              status.style.color = '#b21b3d'
+              return
+            }
+            status.textContent = 'Файл загружен'
+            status.style.color = '#1f7a3a'
+            console.log('res', data)
+          })
+          .catch(() => {
+            status.textContent = 'Ошибка сети'
+            status.style.color = '#b21b3d'
+          })
       })
     </script>
   </body>
