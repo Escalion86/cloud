@@ -6,6 +6,7 @@ import {
   faCloudArrowUp,
   faFolderPlus,
   faHouse,
+  faPen,
   faTableList,
   faTrash,
 } from '@fortawesome/free-solid-svg-icons'
@@ -18,6 +19,7 @@ const Breadcrumbs = ({
   onCreateDir,
   viewMode,
   onToggleView,
+  onRenameDir,
 }) => {
   const fileInputRef = useRef(null)
   const segments = path ? path.split('/').filter(Boolean) : []
@@ -100,6 +102,16 @@ const Breadcrumbs = ({
           <FontAwesomeIcon icon={faFolderPlus} className="text-lg" />
         </button>
         <button
+          className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white/70 text-slate-700 transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={onRenameDir}
+          disabled={!hasParent}
+          aria-label="Переименовать папку"
+          title="Переименовать папку"
+          type="button"
+        >
+          <FontAwesomeIcon icon={faPen} className="text-lg" />
+        </button>
+        <button
           className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700 transition hover:-translate-y-0.5 hover:bg-blue-100"
           onClick={handleUploadClick}
           aria-label="Загрузить файл"
@@ -137,6 +149,7 @@ Breadcrumbs.propTypes = {
   onCreateDir: PropTypes.func.isRequired,
   viewMode: PropTypes.oneOf(['grid', 'table']).isRequired,
   onToggleView: PropTypes.func.isRequired,
+  onRenameDir: PropTypes.func.isRequired,
 }
 
 Breadcrumbs.defaultProps = {

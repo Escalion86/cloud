@@ -184,6 +184,17 @@ const docExtensions = new Set([
   'pptx',
 ])
 
+const getAllowedExtensions = () => {
+  const raw = (process.env.ALLOWED_EXTENSIONS || '').trim()
+  if (!raw) return null
+  return new Set(
+    raw
+      .split(',')
+      .map((item) => item.trim().replace('.', '').toLowerCase())
+      .filter(Boolean),
+  )
+}
+
 const getDocMaxBytes = () => {
   const fallbackMb = 20
   const parsed = Number.parseFloat(process.env.DOC_MAX_MB)
@@ -253,6 +264,7 @@ app.get('/api/files', (req, res) => {
             name: file,
             isFile: stats.isFile(),
             size: stats.isFile() ? stats.size : 0,
+            modified: stats.mtimeMs,
           }
         })
         .filter((item) => (noFolders ? item.isFile : true))
@@ -397,6 +409,48 @@ app.get('/api/disk', async (req, res) => {
   }
 })
 
+app.post('/api/rename', (req, res) => {
+  const targetPath = req.query.path
+  const newName = req.query.name
+
+  if (!targetPath || !newName) {
+    res.status(400).json({ status: 'error', message: 'path and name required' })
+    return
+  }
+
+  if (newName.includes('/') || newName.includes('\\')) {
+    res.status(400).json({ status: 'error', message: 'Invalid name' })
+    return
+  }
+
+  const uploadsRoot = path.resolve(__dirname, '../client/uploads')
+  const safeTarget = path.resolve(uploadsRoot, targetPath)
+  if (!safeTarget.startsWith(uploadsRoot)) {
+    res.status(400).json({ status: 'error', message: 'Invalid path' })
+    return
+  }
+
+  if (!fs.existsSync(safeTarget)) {
+    res.status(404).json({ status: 'error', message: 'Not found' })
+    return
+  }
+
+  const parentDir = path.dirname(safeTarget)
+  const nextPath = path.resolve(parentDir, newName)
+  if (!nextPath.startsWith(uploadsRoot)) {
+    res.status(400).json({ status: 'error', message: 'Invalid target' })
+    return
+  }
+
+  fs.rename(safeTarget, nextPath, (err) => {
+    if (err) {
+      res.status(500).json({ status: 'error', message: 'Rename failed' })
+      return
+    }
+    res.json({ status: 'ok', message: 'Renamed' })
+  })
+})
+
 app.post('/api', upload.single('files'), async (req, res) => {
   // console.log('req.body', req.body)
   // const protocol = req.protocol
@@ -422,6 +476,15 @@ app.post('/api', upload.single('files'), async (req, res) => {
   // await imageUpload(req)
   const { filename } = req.file
   const extension = path.extname(filename).replace('.', '').toLowerCase()
+  const allowedExtensions = getAllowedExtensions()
+  if (allowedExtensions && !allowedExtensions.has(extension)) {
+    fs.unlinkSync(req.file.path)
+    res.status(415).json({
+      status: 'error',
+      message: 'Недопустимый тип файла',
+    })
+    return
+  }
   const isDocument = docExtensions.has(extension)
   if (isDocument) {
     const docLimitBytes = getDocMaxBytes()

@@ -60,6 +60,8 @@ const SelectFile = ({
   selectedFile,
   setFilesCount,
   viewMode,
+  sortKey,
+  sortDir,
 }) => {
   const [items, setItems] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -103,6 +105,7 @@ const SelectFile = ({
             name: fileName,
             isFile: Boolean(item.isFile ?? isFile(fileName)),
             size: item.size || 0,
+            modified: item.modified || 0,
             fullPath: buildFullPath(directory, fileName),
           }
         })
@@ -181,6 +184,29 @@ const SelectFile = ({
     }
   }
 
+  const sortedItems = [...items].sort((a, b) => {
+    const dirMultiplier = sortDir === 'asc' ? 1 : -1
+    if (sortKey === 'name') {
+      return a.name.localeCompare(b.name) * dirMultiplier
+    }
+    if (sortKey === 'size') {
+      return ((a.size || 0) - (b.size || 0)) * dirMultiplier
+    }
+    if (sortKey === 'type') {
+      const typeA = a.isFile
+        ? a.name.split('.').pop()?.toLowerCase() || 'file'
+        : 'folder'
+      const typeB = b.isFile
+        ? b.name.split('.').pop()?.toLowerCase() || 'file'
+        : 'folder'
+      return typeA.localeCompare(typeB) * dirMultiplier
+    }
+    if (sortKey === 'date') {
+      return ((a.modified || 0) - (b.modified || 0)) * dirMultiplier
+    }
+    return 0
+  })
+
   return (
     <>
       <div
@@ -190,7 +216,7 @@ const SelectFile = ({
             : 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
         }
       >
-        {items.map((item) => {
+        {sortedItems.map((item) => {
         const ext = item.name.split('.').pop()?.toLowerCase()
         const isImage = item.isFile && imageExtensions.has(ext)
         const fileUrl = `${filesBaseUrl}/${item.fullPath}`
@@ -446,6 +472,8 @@ SelectFile.propTypes = {
   selectedFile: PropTypes.string,
   setFilesCount: PropTypes.func.isRequired,
   viewMode: PropTypes.oneOf(['grid', 'table']).isRequired,
+  sortKey: PropTypes.oneOf(['name', 'size', 'type', 'date']).isRequired,
+  sortDir: PropTypes.oneOf(['asc', 'desc']).isRequired,
 }
 
 SelectFile.defaultProps = {
