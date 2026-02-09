@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFolder } from '@fortawesome/free-solid-svg-icons'
+import {
+  faFile,
+  faFileExcel,
+  faFileLines,
+  faFilePdf,
+  faFilePowerpoint,
+  faFileWord,
+  faFolder,
+} from '@fortawesome/free-solid-svg-icons'
 
 const isFile = (name) => name.includes('.')
 
@@ -30,6 +38,17 @@ const imageExtensions = new Set([
   'bmp',
   'svg',
 ])
+
+const fileIcons = {
+  pdf: faFilePdf,
+  doc: faFileWord,
+  docx: faFileWord,
+  xls: faFileExcel,
+  xlsx: faFileExcel,
+  ppt: faFilePowerpoint,
+  pptx: faFilePowerpoint,
+  txt: faFileLines,
+}
 
 const SelectFile = ({
   directory,
@@ -172,7 +191,12 @@ const SelectFile = ({
                 isImage ? (
                   <img src={fileUrl} alt={item.name} loading="lazy" />
                 ) : (
-                  <div className="file-icon">Файл</div>
+                  <div className="file-icon" aria-label="Файл" title="Файл">
+                    <FontAwesomeIcon
+                      icon={fileIcons[ext] || faFile}
+                      className="icon"
+                    />
+                  </div>
                 )
               ) : (
                 <div className="file-icon" aria-label="Папка" title="Папка">
