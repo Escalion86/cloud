@@ -413,6 +413,26 @@ input {
   white-space: nowrap;
 }
 
+.file-card-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.size-button {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.size-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .state {
   padding: 20px;
   text-align: center;

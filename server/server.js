@@ -4,6 +4,7 @@ const cors = require('cors')
 const fs = require('fs')
 const sharp = require('sharp')
 const path = require('path')
+const fsPromises = require('fs').promises
 
 const { v4: uuidv4 } = require('uuid')
 require('dotenv').config()
@@ -240,13 +241,18 @@ app.get('/api/files', (req, res) => {
         // res.json([])
         return
       }
-      if (noFolders)
-        res.json(
-          files.filter((file) =>
-            fs.statSync(`${directoryPath}/${file}`).isFile(),
-          ),
-        )
-      else res.json(files)
+      const mapped = files
+        .map((file) => {
+          const fullPath = `${directoryPath}/${file}`
+          const stats = fs.statSync(fullPath)
+          return {
+            name: file,
+            isFile: stats.isFile(),
+            size: stats.isFile() ? stats.size : 0,
+          }
+        })
+        .filter((item) => (noFolders ? item.isFile : true))
+      res.json(mapped)
     })
   else res.json([])
 })
@@ -321,6 +327,52 @@ app.post('/api/createdir', (req, res) => {
     }
     res.json({ status: 'ok', message: 'Directory created!' })
   })
+})
+
+const getDirectorySize = async (dirPath) => {
+  let total = 0
+  const entries = await fsPromises.readdir(dirPath, { withFileTypes: true })
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name)
+    if (entry.isDirectory()) {
+      total += await getDirectorySize(fullPath)
+    } else if (entry.isFile()) {
+      const stats = await fsPromises.stat(fullPath)
+      total += stats.size
+    }
+  }
+  return total
+}
+
+app.get('/api/dirsize', async (req, res) => {
+  const directory = req.query.directory
+
+  if (!directory) {
+    res.status(400).json({ status: 'error', message: 'directory is required' })
+    return
+  }
+
+  const uploadsRoot = path.resolve(__dirname, '../client/uploads')
+  const targetPath = path.resolve(uploadsRoot, directory)
+
+  if (!targetPath.startsWith(uploadsRoot)) {
+    res.status(400).json({ status: 'error', message: 'Invalid directory' })
+    return
+  }
+
+  try {
+    const stats = await fsPromises.stat(targetPath)
+    if (!stats.isDirectory()) {
+      res
+        .status(400)
+        .json({ status: 'error', message: 'Not a directory' })
+      return
+    }
+    const size = await getDirectorySize(targetPath)
+    res.json({ status: 'ok', size })
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Error reading dir' })
+  }
 })
 
 app.post('/api', upload.single('files'), async (req, res) => {

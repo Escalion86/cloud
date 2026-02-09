@@ -5,6 +5,19 @@ import { faFolder } from '@fortawesome/free-solid-svg-icons'
 
 const isFile = (name) => name.includes('.')
 
+const formatBytes = (bytes) => {
+  if (!bytes || bytes <= 0) return '—'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let value = bytes
+  let unitIndex = 0
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024
+    unitIndex += 1
+  }
+  const fixed = unitIndex === 0 ? 0 : value < 10 ? 1 : 0
+  return `${value.toFixed(fixed)} ${units[unitIndex]}`
+}
+
 const buildFullPath = (directory, name) =>
   directory ? `${directory}/${name}` : name
 
@@ -30,6 +43,8 @@ const SelectFile = ({
   const [items, setItems] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [folderSizes, setFolderSizes] = useState({})
+  const [folderLoading, setFolderLoading] = useState({})
 
   useEffect(() => {
     let isActive = true
@@ -50,12 +65,22 @@ const SelectFile = ({
         const data = await response.json()
         if (!isActive) return
 
-        const prepared = (data || []).map((name) => {
-          const file = isFile(name)
+        const prepared = (data || []).map((item) => {
+          if (typeof item === 'string') {
+            const file = isFile(item)
+            return {
+              name: item,
+              isFile: file,
+              size: 0,
+              fullPath: buildFullPath(directory, item),
+            }
+          }
+          const fileName = item.name || ''
           return {
-            name,
-            isFile: file,
-            fullPath: buildFullPath(directory, name),
+            name: fileName,
+            isFile: Boolean(item.isFile ?? isFile(fileName)),
+            size: item.size || 0,
+            fullPath: buildFullPath(directory, fileName),
           }
         })
 
@@ -94,8 +119,42 @@ const SelectFile = ({
         const ext = item.name.split('.').pop()?.toLowerCase()
         const isImage = item.isFile && imageExtensions.has(ext)
         const fileUrl = `${filesBaseUrl}/${item.fullPath}`
+        const folderSize = folderSizes[item.fullPath]
+        const isFolderLoading = folderLoading[item.fullPath]
 
         const isSelected = item.isFile && item.fullPath === selectedFile
+
+        const handleFolderSize = async (event) => {
+          event.stopPropagation()
+          if (isFolderLoading) return
+          setFolderLoading((current) => ({
+            ...current,
+            [item.fullPath]: true,
+          }))
+          try {
+            const response = await fetch(
+              `/api/dirsize?directory=${encodeURIComponent(item.fullPath)}`
+            )
+            if (!response.ok) {
+              throw new Error('dirsize_failed')
+            }
+            const data = await response.json()
+            setFolderSizes((current) => ({
+              ...current,
+              [item.fullPath]: data?.size ?? 0,
+            }))
+          } catch (err) {
+            setFolderSizes((current) => ({
+              ...current,
+              [item.fullPath]: -1,
+            }))
+          } finally {
+            setFolderLoading((current) => ({
+              ...current,
+              [item.fullPath]: false,
+            }))
+          }
+        }
 
         return (
           <button
@@ -124,6 +183,29 @@ const SelectFile = ({
             <div className="file-card-name" title={item.name}>
               {item.name}
             </div>
+            {item.isFile && (
+              <div className="file-card-meta">{formatBytes(item.size)}</div>
+            )}
+            {!item.isFile && (
+              <div className="file-card-meta">
+                {typeof folderSize === 'number' ? (
+                  folderSize >= 0 ? (
+                    formatBytes(folderSize)
+                  ) : (
+                    'Ошибка'
+                  )
+                ) : (
+                  <button
+                    className="size-button"
+                    type="button"
+                    onClick={handleFolderSize}
+                    disabled={isFolderLoading}
+                  >
+                    {isFolderLoading ? 'Считаю...' : 'Размер'}
+                  </button>
+                )}
+              </div>
+            )}
           </button>
         )
       })}
