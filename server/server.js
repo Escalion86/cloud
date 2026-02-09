@@ -379,6 +379,22 @@ app.get('/api/dirsize', async (req, res) => {
   }
 })
 
+app.get('/api/disk', async (req, res) => {
+  try {
+    if (typeof fsPromises.statfs !== 'function') {
+      res.status(501).json({ status: 'error', message: 'statfs not supported' })
+      return
+    }
+    const uploadsRoot = path.resolve(__dirname, '../client/uploads')
+    const stats = await fsPromises.statfs(uploadsRoot)
+    const free = stats.bavail * stats.bsize
+    const total = stats.blocks * stats.bsize
+    res.json({ status: 'ok', free, total })
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Error reading disk' })
+  }
+})
+
 app.post('/api', upload.single('files'), async (req, res) => {
   // console.log('req.body', req.body)
   // const protocol = req.protocol

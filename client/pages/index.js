@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowUpRightFromSquare,
+  faDownload,
   faShareNodes,
   faTrash,
   faXmark,
@@ -17,6 +18,19 @@ const normalizeBaseUrl = (baseUrl) => {
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
 }
 
+const formatBytes = (bytes) => {
+  if (!bytes || bytes <= 0) return '—'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let value = bytes
+  let unitIndex = 0
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024
+    unitIndex += 1
+  }
+  const fixed = unitIndex === 0 ? 0 : value < 10 ? 1 : 0
+  return `${value.toFixed(fixed)} ${units[unitIndex]}`
+}
+
 const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
   const router = useRouter()
   const [isAuthed, setIsAuthed] = useState(initialAuthed)
@@ -27,6 +41,7 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
   const [toastMessage, setToastMessage] = useState('')
   const [toastKey, setToastKey] = useState(0)
   const [viewMode, setViewMode] = useState('grid')
+  const [diskInfo, setDiskInfo] = useState(null)
 
   const normalizedFilesBaseUrl = useMemo(
     () => normalizeBaseUrl(filesBaseUrl),
@@ -59,6 +74,36 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
     return () => clearTimeout(timer)
   }, [toastKey, toastMessage])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const saved = window.localStorage.getItem('cloudViewMode')
+    if (saved === 'grid' || saved === 'table') {
+      setViewMode(saved)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('cloudViewMode', viewMode)
+  }, [viewMode])
+
+  useEffect(() => {
+    const loadDisk = async () => {
+      try {
+        const response = await fetch('/api/disk')
+        if (!response.ok) return
+        const data = await response.json()
+        if (data?.status === 'ok') {
+          setDiskInfo({ free: data.free, total: data.total })
+        }
+      } catch (error) {
+        // ignore
+      }
+    }
+
+    loadDisk()
+  }, [refreshKey])
+
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
     setIsAuthed(false)
@@ -78,6 +123,17 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
   const handleOpenSelected = () => {
     if (!selectedFile || !normalizedFilesBaseUrl) return
     window.open(`${normalizedFilesBaseUrl}/${selectedFile}`, '_blank')
+  }
+
+  const handleDownloadSelected = () => {
+    if (!selectedFile || !normalizedFilesBaseUrl) return
+    const url = `${normalizedFilesBaseUrl}/${selectedFile}`
+    const link = document.createElement('a')
+    link.href = url
+    link.download = selectedFile.split('/').pop() || 'file'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const handleShareSelected = async () => {
@@ -222,7 +278,11 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
         <div>
           <div className="text-2xl font-semibold">Обзор файлов</div>
           <div className="mt-1 text-sm text-slate-500">
-            Найдено: {filesCount} | Текущая папка: {directory || 'Корень'}
+            {diskInfo
+              ? `Свободно: ${formatBytes(diskInfo.free)} из ${formatBytes(
+                  diskInfo.total
+                )}`
+              : 'Свободное место: —'}
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -290,6 +350,15 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
               className="text-base"
             />
             Открыть
+          </button>
+          <button
+            className={buttonGhost}
+            type="button"
+            onClick={handleDownloadSelected}
+            disabled={!selectedFile || !normalizedFilesBaseUrl}
+          >
+            <FontAwesomeIcon icon={faDownload} className="text-base" />
+            Скачать
           </button>
           <button
             className={buttonGhost}

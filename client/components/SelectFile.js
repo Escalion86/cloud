@@ -10,6 +10,7 @@ import {
   faFileWord,
   faFolder,
 } from '@fortawesome/free-solid-svg-icons'
+import LazyImage from './LazyImage'
 
 const isFile = (name) => name.includes('.')
 
@@ -75,7 +76,7 @@ const SelectFile = ({
 
       try {
         const response = await fetch(
-          `/api/files?directory=${encodeURIComponent(directory || '')}`
+          `/api/files?directory=${encodeURIComponent(directory || '')}`,
         )
 
         if (!response.ok) {
@@ -122,7 +123,9 @@ const SelectFile = ({
   }, [directory, refreshKey, setFilesCount])
 
   if (isLoading) {
-    return <div className="py-6 text-center text-sm text-slate-500">Загрузка...</div>
+    return (
+      <div className="py-6 text-center text-sm text-slate-500">Загрузка...</div>
+    )
   }
 
   if (error) {
@@ -130,7 +133,11 @@ const SelectFile = ({
   }
 
   if (!items.length) {
-    return <div className="py-6 text-center text-sm text-slate-500">Папка пустая</div>
+    return (
+      <div className="py-6 text-center text-sm text-slate-500">
+        Папка пустая
+      </div>
+    )
   }
 
   return (
@@ -159,7 +166,7 @@ const SelectFile = ({
           }))
           try {
             const response = await fetch(
-              `/api/dirsize?directory=${encodeURIComponent(item.fullPath)}`
+              `/api/dirsize?directory=${encodeURIComponent(item.fullPath)}`,
             )
             if (!response.ok) {
               throw new Error('dirsize_failed')
@@ -186,7 +193,7 @@ const SelectFile = ({
           return (
             <button
               key={item.fullPath}
-              className={`flex w-full cursor-pointer items-center gap-4 rounded-2xl border bg-white/80 px-4 py-3 text-left text-sm shadow-sm transition ${
+              className={`flex overflow-hidden w-full cursor-pointer items-center gap-4 rounded-2xl border bg-white/80 pr-4 py-1 pl-1 text-left text-sm shadow-sm transition ${
                 isSelected
                   ? 'border-orange-300 ring-2 ring-orange-200/70'
                   : 'border-slate-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg'
@@ -198,31 +205,37 @@ const SelectFile = ({
               }
               type="button"
             >
-              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
                 {item.isFile ? (
                   isImage ? (
-                    <img
-                      src={fileUrl}
-                      alt={item.name}
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
+                    <LazyImage src={fileUrl} alt={item.name} />
                   ) : (
-                    <div className="text-slate-400" aria-label="Файл" title="Файл">
+                    <div
+                      className="text-slate-400"
+                      aria-label="Файл"
+                      title="Файл"
+                    >
                       <FontAwesomeIcon
                         icon={fileIcons[ext] || faFile}
-                        className="text-2xl"
+                        className="text-3xl"
                       />
                     </div>
                   )
                 ) : (
-                  <div className="text-slate-400" aria-label="Папка" title="Папка">
-                    <FontAwesomeIcon icon={faFolder} className="text-2xl" />
+                  <div
+                    className="text-slate-400"
+                    aria-label="Папка"
+                    title="Папка"
+                  >
+                    <FontAwesomeIcon icon={faFolder} className="text-3xl" />
                   </div>
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate font-medium text-slate-800" title={item.name}>
+                <div
+                  className="truncate font-medium text-slate-800"
+                  title={item.name}
+                >
                   {item.name}
                 </div>
               </div>
@@ -236,14 +249,25 @@ const SelectFile = ({
                     'Ошибка'
                   )
                 ) : (
-                  <button
-                    className="inline-flex cursor-pointer items-center rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    type="button"
+                  <span
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs transition ${
+                      isFolderLoading
+                        ? 'cursor-not-allowed border-slate-200 text-slate-400'
+                        : 'cursor-pointer border-slate-200 text-slate-500 hover:bg-slate-50'
+                    }`}
+                    role="button"
+                    tabIndex={isFolderLoading ? -1 : 0}
                     onClick={handleFolderSize}
-                    disabled={isFolderLoading}
+                    onKeyDown={(event) => {
+                      if (isFolderLoading) return
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        handleFolderSize(event)
+                      }
+                    }}
                   >
                     {isFolderLoading ? 'Считаю...' : 'Размер'}
-                  </button>
+                  </span>
                 )}
               </div>
             </button>
@@ -268,14 +292,13 @@ const SelectFile = ({
             <div className="flex h-28 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
               {item.isFile ? (
                 isImage ? (
-                  <img
-                    src={fileUrl}
-                    alt={item.name}
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
+                  <LazyImage src={fileUrl} alt={item.name} />
                 ) : (
-                  <div className="text-slate-400" aria-label="Файл" title="Файл">
+                  <div
+                    className="text-slate-400"
+                    aria-label="Файл"
+                    title="Файл"
+                  >
                     <FontAwesomeIcon
                       icon={fileIcons[ext] || faFile}
                       className="text-5xl"
@@ -283,16 +306,25 @@ const SelectFile = ({
                   </div>
                 )
               ) : (
-                <div className="text-slate-400" aria-label="Папка" title="Папка">
+                <div
+                  className="text-slate-400"
+                  aria-label="Папка"
+                  title="Папка"
+                >
                   <FontAwesomeIcon icon={faFolder} className="text-5xl" />
                 </div>
               )}
             </div>
-            <div className="truncate text-sm font-medium text-slate-800" title={item.name}>
+            <div
+              className="truncate text-sm font-medium text-slate-800"
+              title={item.name}
+            >
               {item.name}
             </div>
             {item.isFile && (
-              <div className="text-xs text-slate-500">{formatBytes(item.size)}</div>
+              <div className="text-xs text-slate-500">
+                {formatBytes(item.size)}
+              </div>
             )}
             {!item.isFile && (
               <div className="text-xs text-slate-500">
@@ -303,14 +335,25 @@ const SelectFile = ({
                     'Ошибка'
                   )
                 ) : (
-                  <button
-                    className="inline-flex cursor-pointer items-center rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    type="button"
+                  <span
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs transition ${
+                      isFolderLoading
+                        ? 'cursor-not-allowed border-slate-200 text-slate-400'
+                        : 'cursor-pointer border-slate-200 text-slate-500 hover:bg-slate-50'
+                    }`}
+                    role="button"
+                    tabIndex={isFolderLoading ? -1 : 0}
                     onClick={handleFolderSize}
-                    disabled={isFolderLoading}
+                    onKeyDown={(event) => {
+                      if (isFolderLoading) return
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        handleFolderSize(event)
+                      }
+                    }}
                   >
                     {isFolderLoading ? 'Считаю...' : 'Размер'}
-                  </button>
+                  </span>
                 )}
               </div>
             )}
