@@ -185,6 +185,9 @@ const SelectFile = ({
   }
 
   const sortedItems = [...items].sort((a, b) => {
+    if (a.isFile !== b.isFile) {
+      return a.isFile ? 1 : -1
+    }
     const dirMultiplier = sortDir === 'asc' ? 1 : -1
     if (sortKey === 'name') {
       return a.name.localeCompare(b.name) * dirMultiplier

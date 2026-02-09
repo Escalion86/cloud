@@ -235,6 +235,11 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
 
       request.onload = () => {
         if (request.status >= 200 && request.status < 300) {
+          setUploadState((current) => ({
+            ...current,
+            progress: 100,
+            message: 'Обработка файла...',
+          }))
           resolve()
         } else {
           try {
@@ -275,19 +280,25 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
           message: 'Загрузка файла...',
         })
         await uploadSingleFile(file)
+        setUploadState((current) => ({
+          ...current,
+          message: 'Обработка файла...',
+        }))
         showToast(`Файл "${file.name}" загружен`)
       } catch (error) {
         showToast(error.message || 'Ошибка загрузки файла')
       }
     }
 
-    setUploadState({
-      inProgress: false,
-      progress: 0,
-      fileName: '',
-      message: '',
-    })
-    setRefreshKey((current) => current + 1)
+    setTimeout(() => {
+      setUploadState({
+        inProgress: false,
+        progress: 0,
+        fileName: '',
+        message: '',
+      })
+      setRefreshKey((current) => current + 1)
+    }, 400)
   }
 
   const handleCreateDir = () => {
