@@ -15,6 +15,10 @@ require('dotenv').config()
 // }
 
 var app = express()
+app.use(
+  '/uploads',
+  express.static(path.resolve(__dirname, '../client/uploads')),
+)
 
 // app.use((req, res, next) => {
 //   const actualOrigin = req.headers.origin
