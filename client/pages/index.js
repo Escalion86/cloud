@@ -26,16 +26,25 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
   const [refreshKey, setRefreshKey] = useState(0)
   const [toastMessage, setToastMessage] = useState('')
   const [toastKey, setToastKey] = useState(0)
+  const [viewMode, setViewMode] = useState('grid')
 
   const normalizedFilesBaseUrl = useMemo(
     () => normalizeBaseUrl(filesBaseUrl),
-    [filesBaseUrl]
+    [filesBaseUrl],
   )
 
   const normalizedServerApiUrl = useMemo(
     () => normalizeBaseUrl(serverApiUrl),
-    [serverApiUrl]
+    [serverApiUrl],
   )
+
+  const panelClass =
+    'rounded-2xl bg-white/85 p-5 shadow-[0_18px_40px_rgba(24,19,14,0.12)] ring-1 ring-black/5 backdrop-blur flex flex-col gap-y-4'
+  const buttonBase =
+    'inline-flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition'
+  const buttonPrimary = `${buttonBase} bg-orange-600 text-white shadow-sm hover:-translate-y-0.5 hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60`
+  const buttonGhost = `${buttonBase} border border-slate-200 bg-white/70 text-slate-700 hover:-translate-y-0.5 hover:bg-white`
+  const buttonDanger = `${buttonBase} bg-rose-600 text-white shadow-sm hover:-translate-y-0.5 hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60`
 
   const showToast = (message) => {
     setToastMessage(message)
@@ -100,7 +109,7 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
     try {
       const response = await fetch(
         `/api/deletefile?filePath=${encodeURIComponent(selectedFile)}`,
-        { method: 'DELETE' }
+        { method: 'DELETE' },
       )
       if (!response.ok) {
         throw new Error('delete_failed')
@@ -150,7 +159,7 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
     try {
       const response = await fetch(
         `/api/createdir?directory=${encodeURIComponent(dirPath)}`,
-        { method: 'POST' }
+        { method: 'POST' },
       )
       if (!response.ok) {
         const data = await response.json().catch(() => null)
@@ -172,7 +181,7 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
     try {
       const response = await fetch(
         `/api/deletedir?directory=${encodeURIComponent(dirPath)}`,
-        { method: 'DELETE' }
+        { method: 'DELETE' },
       )
       if (!response.ok) {
         throw new Error('delete_failed')
@@ -185,12 +194,16 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
     }
   }
 
+  const handleToggleView = () => {
+    setViewMode((current) => (current === 'grid' ? 'table' : 'grid'))
+  }
+
   if (!isAuthed) {
     return (
-      <main className="page">
-        <div className="hero">
-          <div className="hero-title">Cloud Viewer</div>
-          <div className="hero-subtitle">
+      <main className="flex min-h-screen flex-col gap-8 px-5 py-10 sm:px-8 lg:px-16">
+        <div className="max-w-2xl space-y-3">
+          <div className="text-4xl font-semibold sm:text-5xl">Cloud Viewer</div>
+          <div className="text-sm text-slate-500">
             Авторизуйтесь, чтобы просматривать файлы сервера.
           </div>
         </div>
@@ -200,32 +213,37 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
   }
 
   return (
-    <main className={`page${selectedFile ? ' has-selection' : ''}`}>
-      <header className="header">
+    <main
+      className={`flex min-h-screen flex-col gap-6 px-5 py-10 sm:px-8 lg:px-16 ${
+        selectedFile ? 'pb-40' : ''
+      }`}
+    >
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="title">Обзор файлов</div>
-          <div className="subtitle">
-            Найдено: {filesCount} | Текущая папка:{' '}
-            {directory || 'Корень'}
+          <div className="text-2xl font-semibold">Обзор файлов</div>
+          <div className="mt-1 text-sm text-slate-500">
+            Найдено: {filesCount} | Текущая папка: {directory || 'Корень'}
           </div>
         </div>
-        <div className="header-actions">
-          <button className="button ghost" onClick={() => router.reload()}>
+        <div className="flex flex-wrap gap-3">
+          <button className={buttonGhost} onClick={() => router.reload()}>
             Обновить
           </button>
-          <button className="button" onClick={handleLogout}>
+          <button className={buttonPrimary} onClick={handleLogout}>
             Выйти
           </button>
         </div>
       </header>
 
-      <section className="panel">
+      <section className={panelClass}>
         <Breadcrumbs
           path={directory}
           onNavigate={handleSelectDir}
           onDeleteDir={handleDeleteDir}
           onUploadFiles={handleUploadFiles}
           onCreateDir={handleCreateDir}
+          viewMode={viewMode}
+          onToggleView={handleToggleView}
         />
         <SelectFile
           directory={directory}
@@ -235,69 +253,80 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
           refreshKey={refreshKey}
           selectedFile={selectedFile}
           setFilesCount={setFilesCount}
+          viewMode={viewMode}
         />
       </section>
 
       <section
-        className={`panel info selected-file-panel${
-          selectedFile ? ' is-open' : ''
+        className={`${panelClass} fixed bottom-5 left-1/2 w-[min(960px,calc(100%-40px))] -translate-x-1/2 transition ${
+          selectedFile
+            ? 'pointer-events-auto translate-y-0 opacity-100'
+            : 'pointer-events-none translate-y-4 opacity-0'
         }`}
         aria-hidden={!selectedFile}
       >
-        <div className="selected-file-header">
-          <div className="info-title">Выбранный файл</div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm font-semibold">Выбранный файл</div>
           <button
-            className="selected-file-close"
+            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:-translate-y-0.5 hover:bg-white hover:text-slate-700"
             type="button"
             onClick={handleCloseSelected}
             aria-label="Закрыть"
             title="Закрыть"
           >
-            <FontAwesomeIcon icon={faXmark} className="close-icon" />
+            <FontAwesomeIcon icon={faXmark} className="text-base" />
           </button>
         </div>
-        <div className="info-value">{selectedFile}</div>
-        <div className="info-actions">
+        <div className="text-sm text-slate-500">{selectedFile}</div>
+        <div className="flex flex-wrap gap-3">
           <button
-            className="button"
+            className={buttonPrimary}
             type="button"
             onClick={handleOpenSelected}
             disabled={!selectedFile || !normalizedFilesBaseUrl}
           >
-            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="icon" />
+            <FontAwesomeIcon
+              icon={faArrowUpRightFromSquare}
+              className="text-base"
+            />
             Открыть
           </button>
           <button
-            className="button ghost"
+            className={buttonGhost}
             type="button"
             onClick={handleShareSelected}
             disabled={!selectedFile || !normalizedFilesBaseUrl}
           >
-            <FontAwesomeIcon icon={faShareNodes} className="icon" />
+            <FontAwesomeIcon icon={faShareNodes} className="text-base" />
             Поделиться
           </button>
           <button
-            className="button danger"
+            className={buttonDanger}
             type="button"
             onClick={handleDeleteSelected}
             disabled={!selectedFile}
           >
-            <FontAwesomeIcon icon={faTrash} className="icon" />
+            <FontAwesomeIcon icon={faTrash} className="text-base" />
             Удалить
           </button>
         </div>
       </section>
 
       {!normalizedFilesBaseUrl && (
-        <section className="panel warning">
-          <div className="info-title">Внимание</div>
-          <div className="info-value">
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-amber-900 shadow-sm">
+          <div className="text-sm font-semibold">Внимание</div>
+          <div className="text-sm text-amber-800">
             Не задана переменная FILES_BASE_URL. Превью файлов недоступно.
           </div>
         </section>
       )}
 
-      <div key={toastKey} className={`toast${toastMessage ? ' is-open' : ''}`}>
+      <div
+        key={toastKey}
+        className={`fixed bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/90 px-4 py-2 text-xs font-medium text-white shadow-lg transition ${
+          toastMessage ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+        }`}
+      >
         {toastMessage}
       </div>
     </main>
@@ -319,9 +348,7 @@ export const getServerSideProps = async ({ req }) => {
   const { isAuthed } = require('../lib/auth')
 
   const filesBaseUrl =
-    process.env.FILES_BASE_URL ||
-    process.env.NEXT_PUBLIC_FILES_BASE_URL ||
-    ''
+    process.env.FILES_BASE_URL || process.env.NEXT_PUBLIC_FILES_BASE_URL || ''
   const serverApiUrl =
     process.env.SERVER_API_URL || process.env.NEXT_PUBLIC_SERVER_API_URL || ''
 

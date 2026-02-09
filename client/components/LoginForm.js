@@ -36,14 +36,17 @@ const LoginForm = ({ onSuccess }) => {
   }
 
   return (
-    <form className="login-card" onSubmit={handleSubmit}>
-      <div className="login-title">Вход</div>
-      <label className="login-label" htmlFor="password">
+    <form
+      className="flex w-full max-w-md flex-col gap-4 rounded-2xl bg-white/90 p-6 shadow-[0_20px_45px_rgba(33,18,12,0.18)] ring-1 ring-black/5 backdrop-blur sm:p-7"
+      onSubmit={handleSubmit}
+    >
+      <div className="text-2xl font-semibold">Вход</div>
+      <label className="text-sm text-slate-500" htmlFor="password">
         Пароль
       </label>
       <input
         id="password"
-        className="login-input"
+        className="rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/80"
         type="password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
@@ -51,8 +54,12 @@ const LoginForm = ({ onSuccess }) => {
         autoComplete="current-password"
         required
       />
-      {error && <div className="login-error">{error}</div>}
-      <button className="button primary" type="submit" disabled={isLoading}>
+      {error && <div className="text-sm text-rose-600">{error}</div>}
+      <button
+        className="inline-flex cursor-pointer items-center justify-center rounded-full bg-orange-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+        type="submit"
+        disabled={isLoading}
+      >
         {isLoading ? 'Проверка...' : 'Войти'}
       </button>
     </form>

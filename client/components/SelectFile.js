@@ -58,6 +58,7 @@ const SelectFile = ({
   refreshKey,
   selectedFile,
   setFilesCount,
+  viewMode,
 }) => {
   const [items, setItems] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -121,19 +122,25 @@ const SelectFile = ({
   }, [directory, refreshKey, setFilesCount])
 
   if (isLoading) {
-    return <div className="state">Загрузка...</div>
+    return <div className="py-6 text-center text-sm text-slate-500">Загрузка...</div>
   }
 
   if (error) {
-    return <div className="state error">{error}</div>
+    return <div className="py-6 text-center text-sm text-rose-600">{error}</div>
   }
 
   if (!items.length) {
-    return <div className="state">Папка пустая</div>
+    return <div className="py-6 text-center text-sm text-slate-500">Папка пустая</div>
   }
 
   return (
-    <div className="file-grid">
+    <div
+      className={
+        viewMode === 'table'
+          ? 'flex flex-col gap-2'
+          : 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+      }
+    >
       {items.map((item) => {
         const ext = item.name.split('.').pop()?.toLowerCase()
         const isImage = item.isFile && imageExtensions.has(ext)
@@ -175,10 +182,82 @@ const SelectFile = ({
           }
         }
 
+        if (viewMode === 'table') {
+          return (
+            <button
+              key={item.fullPath}
+              className={`flex w-full cursor-pointer items-center gap-4 rounded-2xl border bg-white/80 px-4 py-3 text-left text-sm shadow-sm transition ${
+                isSelected
+                  ? 'border-orange-300 ring-2 ring-orange-200/70'
+                  : 'border-slate-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg'
+              }`}
+              onClick={() =>
+                item.isFile
+                  ? onSelectFile(item.fullPath)
+                  : onSelectDir(item.fullPath)
+              }
+              type="button"
+            >
+              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+                {item.isFile ? (
+                  isImage ? (
+                    <img
+                      src={fileUrl}
+                      alt={item.name}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-slate-400" aria-label="Файл" title="Файл">
+                      <FontAwesomeIcon
+                        icon={fileIcons[ext] || faFile}
+                        className="text-2xl"
+                      />
+                    </div>
+                  )
+                ) : (
+                  <div className="text-slate-400" aria-label="Папка" title="Папка">
+                    <FontAwesomeIcon icon={faFolder} className="text-2xl" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium text-slate-800" title={item.name}>
+                  {item.name}
+                </div>
+              </div>
+              <div className="text-xs text-slate-500">
+                {item.isFile ? (
+                  formatBytes(item.size)
+                ) : typeof folderSize === 'number' ? (
+                  folderSize >= 0 ? (
+                    formatBytes(folderSize)
+                  ) : (
+                    'Ошибка'
+                  )
+                ) : (
+                  <button
+                    className="inline-flex cursor-pointer items-center rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    type="button"
+                    onClick={handleFolderSize}
+                    disabled={isFolderLoading}
+                  >
+                    {isFolderLoading ? 'Считаю...' : 'Размер'}
+                  </button>
+                )}
+              </div>
+            </button>
+          )
+        }
+
         return (
           <button
             key={item.fullPath}
-            className={`file-card${isSelected ? ' selected' : ''}`}
+            className={`group flex min-h-[170px] cursor-pointer flex-col gap-3 rounded-2xl border bg-white/80 p-3 text-left shadow-sm transition ${
+              isSelected
+                ? 'border-orange-300 ring-2 ring-orange-200/70'
+                : 'border-slate-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg'
+            }`}
             onClick={() =>
               item.isFile
                 ? onSelectFile(item.fullPath)
@@ -186,32 +265,37 @@ const SelectFile = ({
             }
             type="button"
           >
-            <div className="file-card-preview">
+            <div className="flex h-28 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
               {item.isFile ? (
                 isImage ? (
-                  <img src={fileUrl} alt={item.name} loading="lazy" />
+                  <img
+                    src={fileUrl}
+                    alt={item.name}
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
-                  <div className="file-icon" aria-label="Файл" title="Файл">
+                  <div className="text-slate-400" aria-label="Файл" title="Файл">
                     <FontAwesomeIcon
                       icon={fileIcons[ext] || faFile}
-                      className="icon"
+                      className="text-5xl"
                     />
                   </div>
                 )
               ) : (
-                <div className="file-icon" aria-label="Папка" title="Папка">
-                  <FontAwesomeIcon icon={faFolder} className="icon" />
+                <div className="text-slate-400" aria-label="Папка" title="Папка">
+                  <FontAwesomeIcon icon={faFolder} className="text-5xl" />
                 </div>
               )}
             </div>
-            <div className="file-card-name" title={item.name}>
+            <div className="truncate text-sm font-medium text-slate-800" title={item.name}>
               {item.name}
             </div>
             {item.isFile && (
-              <div className="file-card-meta">{formatBytes(item.size)}</div>
+              <div className="text-xs text-slate-500">{formatBytes(item.size)}</div>
             )}
             {!item.isFile && (
-              <div className="file-card-meta">
+              <div className="text-xs text-slate-500">
                 {typeof folderSize === 'number' ? (
                   folderSize >= 0 ? (
                     formatBytes(folderSize)
@@ -220,7 +304,7 @@ const SelectFile = ({
                   )
                 ) : (
                   <button
-                    className="size-button"
+                    className="inline-flex cursor-pointer items-center rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     type="button"
                     onClick={handleFolderSize}
                     disabled={isFolderLoading}
@@ -245,6 +329,7 @@ SelectFile.propTypes = {
   refreshKey: PropTypes.number,
   selectedFile: PropTypes.string,
   setFilesCount: PropTypes.func.isRequired,
+  viewMode: PropTypes.oneOf(['grid', 'table']).isRequired,
 }
 
 SelectFile.defaultProps = {
