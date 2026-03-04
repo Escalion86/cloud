@@ -26,6 +26,10 @@ export default async function handler(req, res) {
   }
 
   const url = new URL('/api/disk', baseUrl)
+  const password = process.env.SERVER_API_PASSWORD || ''
+  if (password) {
+    url.searchParams.set('password', password)
+  }
 
   try {
     const response = await fetch(url.toString())

@@ -30,9 +30,13 @@ export default async function handler(req, res) {
     res.status(400).json({ message: 'directory is required' })
     return
   }
+  const password = process.env.SERVER_API_PASSWORD || ''
 
   const url = new URL('/api/dirsize', baseUrl)
   url.searchParams.set('directory', directory)
+  if (password) {
+    url.searchParams.set('password', password)
+  }
 
   try {
     const response = await fetch(url.toString())

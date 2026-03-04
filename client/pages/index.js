@@ -220,6 +220,9 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
       const formData = new FormData()
       formData.append('directory', directory)
       formData.append('files', file)
+      if (process.env.NEXT_PUBLIC_SERVER_API_PASSWORD) {
+        formData.append('password', process.env.NEXT_PUBLIC_SERVER_API_PASSWORD)
+      }
 
       const request = new XMLHttpRequest()
       request.open('POST', `${normalizedServerApiUrl}/api`)

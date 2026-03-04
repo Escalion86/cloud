@@ -20,6 +20,46 @@ app.use(
   express.static(path.resolve(__dirname, '../client/uploads')),
 )
 
+const normalizeOrigin = (value) =>
+  (value || '').toString().trim().replace(/\/+$/g, '')
+
+const expandOriginEntry = (value) => {
+  const normalized = normalizeOrigin(value)
+  if (!normalized) return []
+  if (/^https?:\/\//i.test(normalized)) return [normalized]
+  return [`https://${normalized}`, `http://${normalized}`]
+}
+
+const allowedOrigins = new Set(
+  [
+    'http://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+    'http://xn--80aaennmesfbiiz1a7a.xn--p1ai',
+    'https://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+    'https://xn--80aaennmesfbiiz1a7a.xn--p1ai',
+    'http://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+    'http://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+    'https://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+    'https://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+    'https://www.dev.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+    'https://dev.xn--80aaennmesfbiiz1a7a.xn--p1ai',
+    'escalioncloud.ru',
+    'www.escalioncloud.ru',
+    'https://artistcrm.ru',
+    'https://www.artistcrm.ru',
+    'https://actquest.ru',
+    'https://www.actquest.ru',
+    'http://localhost:3000',
+  ]
+    .flatMap(expandOriginEntry)
+    .map(normalizeOrigin),
+)
+
+const isAuthorized = (req) => {
+  const authValue =
+    req.query.password || req.body?.password || req.headers['x-api-password']
+  return Boolean(process.env.PASSWORD) && authValue === process.env.PASSWORD
+}
+
 // app.use((req, res, next) => {
 //   const actualOrigin = req.headers.origin
 //   if (['Content-Type'].includes(actualOrigin)) {
@@ -55,25 +95,21 @@ app.use(
       // 'X-Refresh-Token',
     ], // you can change the headers
     // exposedHeaders: ['authorization'], // you can change the headers
-    origin: [
-      'http://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'http://xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'https://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'https://xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'http://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'http://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'https://www.nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'https://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'https://www.dev.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'https://dev.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-      'escalioncloud.ru',
-      'www.escalioncloud.ru',
-      'https://artistcrm.ru',
-      'https://www.artistcrm.ru',
-      'https://actquest.ru',
-      'https://www.actquest.ru',
-      'http://localhost:3000',
-    ],
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true)
+        return
+      }
+      const normalized = normalizeOrigin(origin)
+      if (
+        allowedOrigins.has(normalized) ||
+        /^http:\/\/localhost:\d+$/i.test(normalized)
+      ) {
+        callback(null, true)
+        return
+      }
+      callback(new Error('Not allowed by CORS'))
+    },
     // headers: [
     //   'Origin',
     //   // 'X-Requested-With',
@@ -91,9 +127,6 @@ app.use(function (err, req, res, next) {
   console.error(err.stack)
   res.status(500).send('Something broke!')
 })
-
-var pathFolder
-var urls = []
 
 // Start by creating some disk storage options:
 const mimeExtensionMap = {
@@ -143,18 +176,29 @@ const storage = multer.diskStorage({
     // console.log('password', password)
     // console.log('process.env.PASSWORD', process.env.PASSWORD)
     // if (!!password && password === process.env.PASSWORD) {
-    pathFolder = buildPathFolder(req.body)
+    const pathFolder = buildPathFolder(req.body)
+    req.uploadPathFolder = pathFolder
+    req.uploadedUrls = []
     const serverPath = `${__dirname}/../client/temp`
     // const serverPath = `${__dirname}/../client/uploads/${pathFolder}`
     // console.log('req.headers', req.headers)
     // fs.mkdirSync(serverPath, { recursive: true })
+    const uploadsRoot = path.resolve(__dirname, '../client/uploads')
     const targetDir = pathFolder
-      ? `${__dirname}/../client/uploads/${pathFolder}`
-      : `${__dirname}/../client/uploads`
-    fs.mkdirSync(targetDir, {
-      recursive: true,
-    })
-    callback(null, serverPath)
+      ? path.resolve(uploadsRoot, pathFolder)
+      : uploadsRoot
+    if (!targetDir.startsWith(uploadsRoot)) {
+      callback(new Error('Invalid directory'))
+      return
+    }
+    try {
+      fs.mkdirSync(targetDir, {
+        recursive: true,
+      })
+      callback(null, serverPath)
+    } catch (error) {
+      callback(error)
+    }
     // } else {
     //   callback('Wrong password')
     // }
@@ -164,10 +208,14 @@ const storage = multer.diskStorage({
     const randomPart = uuidv4()
     const extension = normalizeExtension(file)
     const newFileName = `${randomPart}.${extension}`
+    const pathFolder = req.uploadPathFolder || ''
     const storedPath = pathFolder
       ? `${pathFolder}/${newFileName}`
       : newFileName
-    urls.push(storedPath)
+    if (!Array.isArray(req.uploadedUrls)) {
+      req.uploadedUrls = []
+    }
+    req.uploadedUrls.push(storedPath)
     callback(null, newFileName)
   },
   // Sets saved filename(s) to be original filename(s)
@@ -245,6 +293,10 @@ const upload = multer({ storage, limits: { fileSize: maxSize } })
 //   }
 
 app.get('/api/files', (req, res) => {
+  if (!isAuthorized(req)) {
+    res.status(401).json({ status: 'error', message: 'Unauthorized' })
+    return
+  }
   const directory = req.query.directory
   const noFolders = req.query.noFolders
   console.log('req.query :>> ', req.query)
@@ -274,6 +326,10 @@ app.get('/api/files', (req, res) => {
 })
 
 app.get('/api/deletefile', (req, res) => {
+  if (!isAuthorized(req)) {
+    res.status(401).json({ status: 'error', message: 'Unauthorized' })
+    return
+  }
   const filePath = req.query.filePath
 
   const directoryFilePath = `${__dirname}/../client/uploads/${filePath}` // Specify the directory path here
@@ -291,6 +347,10 @@ app.get('/api/deletefile', (req, res) => {
 })
 
 app.delete('/api/deletedir', (req, res) => {
+  if (!isAuthorized(req)) {
+    res.status(401).json({ status: 'error', message: 'Unauthorized' })
+    return
+  }
   const directory = req.query.directory
 
   if (!directory) {
@@ -321,6 +381,10 @@ app.delete('/api/deletedir', (req, res) => {
 })
 
 app.post('/api/createdir', (req, res) => {
+  if (!isAuthorized(req)) {
+    res.status(401).json({ status: 'error', message: 'Unauthorized' })
+    return
+  }
   const directory = req.query.directory
 
   if (!directory) {
@@ -361,6 +425,10 @@ const getDirectorySize = async (dirPath) => {
 }
 
 app.get('/api/dirsize', async (req, res) => {
+  if (!isAuthorized(req)) {
+    res.status(401).json({ status: 'error', message: 'Unauthorized' })
+    return
+  }
   const directory = req.query.directory
 
   if (typeof directory === 'undefined') {
@@ -394,6 +462,10 @@ app.get('/api/dirsize', async (req, res) => {
 })
 
 app.get('/api/disk', async (req, res) => {
+  if (!isAuthorized(req)) {
+    res.status(401).json({ status: 'error', message: 'Unauthorized' })
+    return
+  }
   try {
     if (typeof fsPromises.statfs !== 'function') {
       res.status(501).json({ status: 'error', message: 'statfs not supported' })
@@ -410,6 +482,10 @@ app.get('/api/disk', async (req, res) => {
 })
 
 app.post('/api/rename', (req, res) => {
+  if (!isAuthorized(req)) {
+    res.status(401).json({ status: 'error', message: 'Unauthorized' })
+    return
+  }
   const targetPath = req.query.path
   const newName = req.query.name
 
@@ -452,6 +528,10 @@ app.post('/api/rename', (req, res) => {
 })
 
 app.post('/api', upload.single('files'), async (req, res) => {
+  if (!isAuthorized(req)) {
+    res.status(401).json({ status: 'error', message: 'Unauthorized' })
+    return
+  }
   // console.log('req.body', req.body)
   // const protocol = req.protocol
   // const host = req.hostname
@@ -474,59 +554,78 @@ app.post('/api', upload.single('files'), async (req, res) => {
   // console.log(req.body) // Logs form body values
   // console.log(req.files) // Logs any files
   // await imageUpload(req)
-  const { filename } = req.file
-  const extension = path.extname(filename).replace('.', '').toLowerCase()
-  const allowedExtensions = getAllowedExtensions()
-  if (allowedExtensions && !allowedExtensions.has(extension)) {
-    fs.unlinkSync(req.file.path)
-    res.status(415).json({
-      status: 'error',
-      message: 'Недопустимый тип файла',
-    })
-    return
-  }
-  const isDocument = docExtensions.has(extension)
-  if (isDocument) {
-    const docLimitBytes = getDocMaxBytes()
-    if (req.file.size > docLimitBytes) {
+  try {
+    if (!req.file) {
+      res.status(400).json({ status: 'error', message: 'Файл не передан' })
+      return
+    }
+
+    const { filename } = req.file
+    const extension = path.extname(filename).replace('.', '').toLowerCase()
+    const allowedExtensions = getAllowedExtensions()
+    if (allowedExtensions && !allowedExtensions.has(extension)) {
       fs.unlinkSync(req.file.path)
-      res.status(413).json({
+      res.status(415).json({
         status: 'error',
-        message: 'Файл превышает лимит',
-        maxBytes: docLimitBytes,
+        message: 'Недопустимый тип файла',
       })
       return
     }
-  }
-  const destinationPath = path.resolve(
-    req.file.destination,
-    '../uploads/',
-    pathFolder,
-    filename,
-  )
-  const isImage = req.file.mimetype.startsWith('image/')
-  const canProcessImage = ['jpg', 'jpeg', 'png', 'webp'].includes(extension)
+    const isDocument = docExtensions.has(extension)
+    if (isDocument) {
+      const docLimitBytes = getDocMaxBytes()
+      if (req.file.size > docLimitBytes) {
+        fs.unlinkSync(req.file.path)
+        res.status(413).json({
+          status: 'error',
+          message: 'Файл превышает лимит',
+          maxBytes: docLimitBytes,
+        })
+        return
+      }
+    }
 
-  if (isImage && canProcessImage) {
-    const format = extension === 'jpg' ? 'jpeg' : extension
-    await sharp(req.file.path)
-      .resize(2400, 2400, {
-        fit: 'inside',
-        withoutEnlargement: true,
-      })
-      .toFormat(format, { quality: 90 })
-      .toFile(destinationPath)
-    fs.unlinkSync(req.file.path)
-  } else {
-    fs.renameSync(req.file.path, destinationPath)
-  }
+    const uploadsRoot = path.resolve(__dirname, '../client/uploads')
+    const uploadPathFolder = req.uploadPathFolder || ''
+    const destinationPath = path.resolve(uploadsRoot, uploadPathFolder, filename)
+    if (!destinationPath.startsWith(uploadsRoot)) {
+      fs.unlinkSync(req.file.path)
+      res.status(400).json({ status: 'error', message: 'Invalid directory' })
+      return
+    }
 
-  const urlsToSend = urls.map(
-    (url) => `https://escalioncloud.ru/uploads/${url}`,
-  )
-  urls = []
-  console.log('urlsToSend', urlsToSend)
-  res.json(urlsToSend)
+    const isImage = req.file.mimetype.startsWith('image/')
+    const canProcessImage = ['jpg', 'jpeg', 'png', 'webp'].includes(extension)
+
+    if (isImage && canProcessImage) {
+      const format = extension === 'jpg' ? 'jpeg' : extension
+      await sharp(req.file.path)
+        .resize(2400, 2400, {
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .toFormat(format, { quality: 90 })
+        .toFile(destinationPath)
+      fs.unlinkSync(req.file.path)
+    } else {
+      fs.renameSync(req.file.path, destinationPath)
+    }
+
+    const urlsToSend = (req.uploadedUrls || []).map(
+      (url) => `https://escalioncloud.ru/uploads/${url}`,
+    )
+    console.log('urlsToSend', urlsToSend)
+    res.json(urlsToSend)
+  } catch (error) {
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path)
+      } catch (unlinkError) {
+        // ignore temp cleanup errors
+      }
+    }
+    res.status(500).json({ status: 'error', message: 'Ошибка загрузки файла' })
+  }
   // res.json(true)
 })
 

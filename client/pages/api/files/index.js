@@ -27,10 +27,14 @@ export default async function handler(req, res) {
 
   const url = new URL('/api/files', baseUrl)
   const { directory = '', noFolders } = req.query || {}
+  const password = process.env.SERVER_API_PASSWORD || ''
 
   url.searchParams.set('directory', directory)
   if (typeof noFolders !== 'undefined') {
     url.searchParams.set('noFolders', noFolders)
+  }
+  if (password) {
+    url.searchParams.set('password', password)
   }
 
   try {

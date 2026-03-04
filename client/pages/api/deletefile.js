@@ -30,9 +30,13 @@ export default async function handler(req, res) {
     res.status(400).json({ message: 'filePath is required' })
     return
   }
+  const password = process.env.SERVER_API_PASSWORD || ''
 
   const url = new URL('/api/deletefile', baseUrl)
   url.searchParams.set('filePath', filePath)
+  if (password) {
+    url.searchParams.set('password', password)
+  }
 
   try {
     const response = await fetch(url.toString())

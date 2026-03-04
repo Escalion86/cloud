@@ -30,10 +30,14 @@ export default async function handler(req, res) {
     res.status(400).json({ message: 'path and name required' })
     return
   }
+  const password = process.env.SERVER_API_PASSWORD || ''
 
   const url = new URL('/api/rename', baseUrl)
   url.searchParams.set('path', path)
   url.searchParams.set('name', name)
+  if (password) {
+    url.searchParams.set('password', password)
+  }
 
   try {
     const response = await fetch(url.toString(), { method: 'POST' })
