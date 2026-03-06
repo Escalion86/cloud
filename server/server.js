@@ -71,6 +71,28 @@ const isAuthorized = (req) => {
   return Boolean(process.env.PASSWORD) && authValue === process.env.PASSWORD
 }
 
+const getErrorReason = (error, fallback) => {
+  if (!error) return fallback
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return 'Файл превышает допустимый размер'
+    }
+    return error.message || `Multer error: ${error.code}`
+  }
+  if (typeof error === 'string') return error
+  return error.message || fallback
+}
+
+const logApiError = (scope, error) => {
+  const name = error?.name || 'Error'
+  const code = error?.code || 'UNKNOWN'
+  const message = error?.message || String(error)
+  console.error(`[${scope}] ${name} (${code}): ${message}`)
+  if (error?.stack) {
+    console.error(error.stack)
+  }
+}
+
 // app.use((req, res, next) => {
 //   const actualOrigin = req.headers.origin
 //   if (['Content-Type'].includes(actualOrigin)) {
@@ -538,106 +560,128 @@ app.post('/api/rename', (req, res) => {
   })
 })
 
-app.post('/api', upload.single('files'), async (req, res) => {
-  if (!isAuthorized(req)) {
-    res.status(401).json({ status: 'error', message: 'Unauthorized' })
-    return
-  }
-  // console.log('req.body', req.body)
-  // const protocol = req.protocol
-  // const host = req.hostname
-  // const url = req.originalUrl
-  // const port = process.env.PORT || PORT
-
-  // formData.append('password', 'cloudtest')
-
-  // ------This from client ------
-  // formData.append('project', project ?? 'polovinka_uspeha')
-  // formData.append('folder', folder ?? 'temp')
-  // formData.append('fileType', 'file')
-  // formData.append('files', file)
-  // formData.append('fileName', fileName)
-  // -----------------------------
-
-  // const domain = `${protocol}://${host}`
-  // Sets multer to intercept files named "files" on uploaded form data
-  // console.log('req.headers2', req.headers)
-  // console.log(req.body) // Logs form body values
-  // console.log(req.files) // Logs any files
-  // await imageUpload(req)
-  try {
-    if (!req.file) {
-      res.status(400).json({ status: 'error', message: 'Файл не передан' })
-      return
-    }
-
-    const { filename } = req.file
-    const extension = path.extname(filename).replace('.', '').toLowerCase()
-    const allowedExtensions = getAllowedExtensions()
-    if (allowedExtensions && !allowedExtensions.has(extension)) {
-      fs.unlinkSync(req.file.path)
-      res.status(415).json({
+app.post('/api', (req, res) => {
+  upload.single('files')(req, res, async (uploadError) => {
+    if (uploadError) {
+      logApiError('upload-middleware', uploadError)
+      res.status(400).json({
         status: 'error',
-        message: 'Недопустимый тип файла',
+        message: 'Ошибка загрузки файла',
+        reason: getErrorReason(uploadError, 'Ошибка upload middleware'),
       })
       return
     }
-    const isDocument = docExtensions.has(extension)
-    if (isDocument) {
-      const docLimitBytes = getDocMaxBytes()
-      if (req.file.size > docLimitBytes) {
-        fs.unlinkSync(req.file.path)
-        res.status(413).json({
-          status: 'error',
-          message: 'Файл превышает лимит',
-          maxBytes: docLimitBytes,
-        })
-        return
-      }
-    }
 
-    const uploadsRoot = path.resolve(__dirname, '../client/uploads')
-    const uploadPathFolder = req.uploadPathFolder || ''
-    const destinationPath = path.resolve(uploadsRoot, uploadPathFolder, filename)
-    if (!destinationPath.startsWith(uploadsRoot)) {
-      fs.unlinkSync(req.file.path)
-      res.status(400).json({ status: 'error', message: 'Invalid directory' })
+    if (!isAuthorized(req)) {
+      res.status(401).json({ status: 'error', message: 'Unauthorized' })
       return
     }
 
-    const isImage = req.file.mimetype.startsWith('image/')
-    const canProcessImage = ['jpg', 'jpeg', 'png', 'webp'].includes(extension)
-
-    if (isImage && canProcessImage) {
-      const format = extension === 'jpg' ? 'jpeg' : extension
-      await sharp(req.file.path)
-        .resize(2400, 2400, {
-          fit: 'inside',
-          withoutEnlargement: true,
+    try {
+      if (!req.file) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Файл не передан',
+          reason: 'Поле "files" отсутствует в multipart/form-data',
         })
-        .toFormat(format, { quality: 90 })
-        .toFile(destinationPath)
-      fs.unlinkSync(req.file.path)
-    } else {
-      fs.renameSync(req.file.path, destinationPath)
-    }
-
-    const urlsToSend = (req.uploadedUrls || []).map(
-      (url) => `https://escalioncloud.ru/uploads/${url}`,
-    )
-    console.log('urlsToSend', urlsToSend)
-    res.json(urlsToSend)
-  } catch (error) {
-    if (req.file?.path && fs.existsSync(req.file.path)) {
-      try {
-        fs.unlinkSync(req.file.path)
-      } catch (unlinkError) {
-        // ignore temp cleanup errors
+        return
       }
+
+      const { filename } = req.file
+      const extension = path.extname(filename).replace('.', '').toLowerCase()
+      const allowedExtensions = getAllowedExtensions()
+      if (allowedExtensions && !allowedExtensions.has(extension)) {
+        fs.unlinkSync(req.file.path)
+        res.status(415).json({
+          status: 'error',
+          message: 'Недопустимый тип файла',
+          reason: `Разрешены: ${Array.from(allowedExtensions).join(', ')}`,
+        })
+        return
+      }
+      const isDocument = docExtensions.has(extension)
+      if (isDocument) {
+        const docLimitBytes = getDocMaxBytes()
+        if (req.file.size > docLimitBytes) {
+          fs.unlinkSync(req.file.path)
+          res.status(413).json({
+            status: 'error',
+            message: 'Файл превышает лимит',
+            maxBytes: docLimitBytes,
+            reason: `Размер файла: ${req.file.size} байт`,
+          })
+          return
+        }
+      }
+
+      const uploadsRoot = path.resolve(__dirname, '../client/uploads')
+      const uploadPathFolder = req.uploadPathFolder || ''
+      const destinationPath = path.resolve(
+        uploadsRoot,
+        uploadPathFolder,
+        filename,
+      )
+      if (!destinationPath.startsWith(uploadsRoot)) {
+        fs.unlinkSync(req.file.path)
+        res.status(400).json({
+          status: 'error',
+          message: 'Invalid directory',
+          reason: 'Путь выходит за пределы uploads',
+        })
+        return
+      }
+
+      const isImage = req.file.mimetype.startsWith('image/')
+      const canProcessImage = ['jpg', 'jpeg', 'png', 'webp'].includes(extension)
+
+      if (isImage && canProcessImage) {
+        const format = extension === 'jpg' ? 'jpeg' : extension
+        await sharp(req.file.path)
+          .resize(2400, 2400, {
+            fit: 'inside',
+            withoutEnlargement: true,
+          })
+          .toFormat(format, { quality: 90 })
+          .toFile(destinationPath)
+        fs.unlinkSync(req.file.path)
+      } else {
+        fs.renameSync(req.file.path, destinationPath)
+      }
+
+      const urlsToSend = (req.uploadedUrls || []).map(
+        (url) => `https://escalioncloud.ru/uploads/${url}`,
+      )
+      console.log('urlsToSend', urlsToSend)
+      res.json(urlsToSend)
+    } catch (error) {
+      logApiError('upload-handler', error)
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        try {
+          fs.unlinkSync(req.file.path)
+        } catch (unlinkError) {
+          logApiError('upload-temp-cleanup', unlinkError)
+        }
+      }
+      res.status(500).json({
+        status: 'error',
+        message: 'Ошибка загрузки файла',
+        reason: getErrorReason(error, 'Неизвестная ошибка'),
+      })
     }
-    res.status(500).json({ status: 'error', message: 'Ошибка загрузки файла' })
+  })
+})
+
+app.use((error, req, res, next) => {
+  logApiError('unhandled', error)
+  if (res.headersSent) {
+    next(error)
+    return
   }
-  // res.json(true)
+  res.status(500).json({
+    status: 'error',
+    message: 'Internal server error',
+    reason: getErrorReason(error, 'Unhandled error'),
+  })
 })
 
 app.listen(5000, function () {
