@@ -93,6 +93,74 @@ const logApiError = (scope, error) => {
   }
 }
 
+const escapeHtml = (value) =>
+  (value || '')
+    .toString()
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+const wantsHtmlResponse = (req) => {
+  const accept = (req.headers.accept || '').toString().toLowerCase()
+  return accept.includes('text/html')
+}
+
+const sendUploadResponse = (req, res, statusCode, payload) => {
+  if (!wantsHtmlResponse(req)) {
+    const jsonPayload =
+      statusCode >= 200 &&
+      statusCode < 300 &&
+      typeof payload !== 'undefined' &&
+      Object.prototype.hasOwnProperty.call(payload, 'data')
+        ? payload.data
+        : payload
+    res.status(statusCode).json(jsonPayload)
+    return
+  }
+
+  const isOk = statusCode >= 200 && statusCode < 300
+  const title = isOk ? 'Upload Success' : 'Upload Error'
+  const message = escapeHtml(payload?.message || (isOk ? 'OK' : 'Error'))
+  const reason = escapeHtml(payload?.reason || '')
+  const urls = Array.isArray(payload?.urls) ? payload.urls : []
+  const urlsMarkup = urls.length
+    ? `<ul>${urls
+        .map(
+          (url) =>
+            `<li><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(
+              url,
+            )}</a></li>`,
+        )
+        .join('')}</ul>`
+    : '<p>No files returned</p>'
+
+  res
+    .status(statusCode)
+    .set('Content-Type', 'text/html; charset=utf-8')
+    .send(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>${title}</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; color: #111; }
+      .ok { color: #166534; }
+      .err { color: #991b1b; }
+      code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <h1 class="${isOk ? 'ok' : 'err'}">${title}</h1>
+    <p>${message}</p>
+    ${reason ? `<p><strong>Reason:</strong> <code>${reason}</code></p>` : ''}
+    ${isOk ? urlsMarkup : ''}
+  </body>
+</html>`)
+}
+
 // app.use((req, res, next) => {
 //   const actualOrigin = req.headers.origin
 //   if (['Content-Type'].includes(actualOrigin)) {
@@ -564,7 +632,7 @@ app.post('/api', (req, res) => {
   upload.single('files')(req, res, async (uploadError) => {
     if (uploadError) {
       logApiError('upload-middleware', uploadError)
-      res.status(400).json({
+      sendUploadResponse(req, res, 400, {
         status: 'error',
         message: 'Ошибка загрузки файла',
         reason: getErrorReason(uploadError, 'Ошибка upload middleware'),
@@ -573,13 +641,17 @@ app.post('/api', (req, res) => {
     }
 
     if (!isAuthorized(req)) {
-      res.status(401).json({ status: 'error', message: 'Unauthorized' })
+      sendUploadResponse(req, res, 401, {
+        status: 'error',
+        message: 'Unauthorized',
+        reason: 'Неверный пароль API',
+      })
       return
     }
 
     try {
       if (!req.file) {
-        res.status(400).json({
+        sendUploadResponse(req, res, 400, {
           status: 'error',
           message: 'Файл не передан',
           reason: 'Поле "files" отсутствует в multipart/form-data',
@@ -592,7 +664,7 @@ app.post('/api', (req, res) => {
       const allowedExtensions = getAllowedExtensions()
       if (allowedExtensions && !allowedExtensions.has(extension)) {
         fs.unlinkSync(req.file.path)
-        res.status(415).json({
+        sendUploadResponse(req, res, 415, {
           status: 'error',
           message: 'Недопустимый тип файла',
           reason: `Разрешены: ${Array.from(allowedExtensions).join(', ')}`,
@@ -604,7 +676,7 @@ app.post('/api', (req, res) => {
         const docLimitBytes = getDocMaxBytes()
         if (req.file.size > docLimitBytes) {
           fs.unlinkSync(req.file.path)
-          res.status(413).json({
+          sendUploadResponse(req, res, 413, {
             status: 'error',
             message: 'Файл превышает лимит',
             maxBytes: docLimitBytes,
@@ -623,7 +695,7 @@ app.post('/api', (req, res) => {
       )
       if (!destinationPath.startsWith(uploadsRoot)) {
         fs.unlinkSync(req.file.path)
-        res.status(400).json({
+        sendUploadResponse(req, res, 400, {
           status: 'error',
           message: 'Invalid directory',
           reason: 'Путь выходит за пределы uploads',
@@ -652,7 +724,12 @@ app.post('/api', (req, res) => {
         (url) => `https://escalioncloud.ru/uploads/${url}`,
       )
       console.log('urlsToSend', urlsToSend)
-      res.json(urlsToSend)
+      sendUploadResponse(req, res, 200, {
+        status: 'ok',
+        message: 'Файл загружен',
+        urls: urlsToSend,
+        data: urlsToSend,
+      })
     } catch (error) {
       logApiError('upload-handler', error)
       if (req.file?.path && fs.existsSync(req.file.path)) {
@@ -662,7 +739,7 @@ app.post('/api', (req, res) => {
           logApiError('upload-temp-cleanup', unlinkError)
         }
       }
-      res.status(500).json({
+      sendUploadResponse(req, res, 500, {
         status: 'error',
         message: 'Ошибка загрузки файла',
         reason: getErrorReason(error, 'Неизвестная ошибка'),
