@@ -218,52 +218,21 @@ const buildPathFolder = (body) => {
 
 const storage = multer.diskStorage({
   destination: function (req, file, callback) {
-    const { password } = req.body
-    // console.log('project', project)
-    // console.log('folder', folder)
-    // console.log('password', password)
-    // console.log('process.env.PASSWORD', process.env.PASSWORD)
-    // if (!!password && password === process.env.PASSWORD) {
-    const pathFolder = buildPathFolder(req.body)
-    req.uploadPathFolder = pathFolder
-    req.uploadedUrls = []
-    const serverPath = `${__dirname}/../client/temp`
-    // const serverPath = `${__dirname}/../client/uploads/${pathFolder}`
-    // console.log('req.headers', req.headers)
-    // fs.mkdirSync(serverPath, { recursive: true })
-    const uploadsRoot = path.resolve(__dirname, '../client/uploads')
-    const targetDir = pathFolder
-      ? path.resolve(uploadsRoot, pathFolder)
-      : uploadsRoot
-    if (!targetDir.startsWith(uploadsRoot)) {
-      callback(new Error('Invalid directory'))
-      return
-    }
+    const serverPath = path.resolve(__dirname, '../client/temp')
     try {
-      fs.mkdirSync(targetDir, {
+      fs.mkdirSync(serverPath, {
         recursive: true,
       })
       callback(null, serverPath)
     } catch (error) {
       callback(error)
     }
-    // } else {
-    //   callback('Wrong password')
-    // }
   },
   // Sets file(s) to be saved in uploads folder in same directory
   filename: function (req, file, callback) {
     const randomPart = uuidv4()
     const extension = normalizeExtension(file)
     const newFileName = `${randomPart}.${extension}`
-    const pathFolder = req.uploadPathFolder || ''
-    const storedPath = pathFolder
-      ? `${pathFolder}/${newFileName}`
-      : newFileName
-    if (!Array.isArray(req.uploadedUrls)) {
-      req.uploadedUrls = []
-    }
-    req.uploadedUrls.push(storedPath)
     callback(null, newFileName)
   },
   // Sets saved filename(s) to be original filename(s)
@@ -634,13 +603,12 @@ app.post('/api', (req, res) => {
       }
 
       const uploadsRoot = path.resolve(__dirname, '../client/uploads')
-      const uploadPathFolder = req.uploadPathFolder || ''
-      const destinationPath = path.resolve(
-        uploadsRoot,
-        uploadPathFolder,
-        filename,
-      )
-      if (!destinationPath.startsWith(uploadsRoot)) {
+      const resolvedDirectory = buildPathFolder(req.body || {})
+      const targetDir = resolvedDirectory
+        ? path.resolve(uploadsRoot, resolvedDirectory)
+        : uploadsRoot
+
+      if (!targetDir.startsWith(uploadsRoot)) {
         fs.unlinkSync(req.file.path)
         sendUploadResponse(req, res, 400, {
           status: 'error',
@@ -649,6 +617,8 @@ app.post('/api', (req, res) => {
         })
         return
       }
+      fs.mkdirSync(targetDir, { recursive: true })
+      const destinationPath = path.resolve(targetDir, filename)
 
       const isImage = req.file.mimetype.startsWith('image/')
       const canProcessImage = ['jpg', 'jpeg', 'png', 'webp'].includes(extension)
@@ -667,9 +637,10 @@ app.post('/api', (req, res) => {
         fs.renameSync(req.file.path, destinationPath)
       }
 
-      const urlsToSend = (req.uploadedUrls || []).map(
-        (url) => `https://escalioncloud.ru/uploads/${url}`,
-      )
+      const storedPath = resolvedDirectory
+        ? `${resolvedDirectory}/${filename}`
+        : filename
+      const urlsToSend = [`https://escalioncloud.ru/uploads/${storedPath}`]
       console.log('urlsToSend', urlsToSend)
       sendUploadResponse(req, res, 200, {
         status: 'ok',
