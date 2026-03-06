@@ -93,72 +93,15 @@ const logApiError = (scope, error) => {
   }
 }
 
-const escapeHtml = (value) =>
-  (value || '')
-    .toString()
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-
-const wantsHtmlResponse = (req) => {
-  const accept = (req.headers.accept || '').toString().toLowerCase()
-  return accept.includes('text/html')
-}
-
 const sendUploadResponse = (req, res, statusCode, payload) => {
-  if (!wantsHtmlResponse(req)) {
-    const jsonPayload =
-      statusCode >= 200 &&
-      statusCode < 300 &&
-      typeof payload !== 'undefined' &&
-      Object.prototype.hasOwnProperty.call(payload, 'data')
-        ? payload.data
-        : payload
-    res.status(statusCode).json(jsonPayload)
-    return
-  }
-
-  const isOk = statusCode >= 200 && statusCode < 300
-  const title = isOk ? 'Upload Success' : 'Upload Error'
-  const message = escapeHtml(payload?.message || (isOk ? 'OK' : 'Error'))
-  const reason = escapeHtml(payload?.reason || '')
-  const urls = Array.isArray(payload?.urls) ? payload.urls : []
-  const urlsMarkup = urls.length
-    ? `<ul>${urls
-        .map(
-          (url) =>
-            `<li><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(
-              url,
-            )}</a></li>`,
-        )
-        .join('')}</ul>`
-    : '<p>No files returned</p>'
-
-  res
-    .status(statusCode)
-    .set('Content-Type', 'text/html; charset=utf-8')
-    .send(`<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>${title}</title>
-    <style>
-      body { font-family: Arial, sans-serif; margin: 24px; color: #111; }
-      .ok { color: #166534; }
-      .err { color: #991b1b; }
-      code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
-    </style>
-  </head>
-  <body>
-    <h1 class="${isOk ? 'ok' : 'err'}">${title}</h1>
-    <p>${message}</p>
-    ${reason ? `<p><strong>Reason:</strong> <code>${reason}</code></p>` : ''}
-    ${isOk ? urlsMarkup : ''}
-  </body>
-</html>`)
+  const jsonPayload =
+    statusCode >= 200 &&
+    statusCode < 300 &&
+    typeof payload !== 'undefined' &&
+    Object.prototype.hasOwnProperty.call(payload, 'data')
+      ? payload.data
+      : payload
+  res.status(statusCode).json(jsonPayload)
 }
 
 // app.use((req, res, next) => {
@@ -226,7 +169,11 @@ app.use(
 
 app.use(function (err, req, res, next) {
   console.error(err.stack)
-  res.status(500).send('Something broke!')
+  res.status(500).json({
+    status: 'error',
+    message: 'Internal server error',
+    reason: getErrorReason(err, 'Unhandled error'),
+  })
 })
 
 // Start by creating some disk storage options:
