@@ -54,9 +54,20 @@ const allowedOrigins = new Set(
     .map(normalizeOrigin),
 )
 
+const extractBearerToken = (authorization) => {
+  if (!authorization) return ''
+  const raw = authorization.toString().trim()
+  const match = raw.match(/^Bearer\s+(.+)$/i)
+  return match ? match[1].trim() : raw
+}
+
 const isAuthorized = (req) => {
   const authValue =
-    req.query.password || req.body?.password || req.headers['x-api-password']
+    req.query.password ||
+    req.body?.password ||
+    req.headers['x-api-password'] ||
+    req.headers['x-token'] ||
+    extractBearerToken(req.headers.authorization)
   return Boolean(process.env.PASSWORD) && authValue === process.env.PASSWORD
 }
 
