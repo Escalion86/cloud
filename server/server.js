@@ -227,6 +227,18 @@ const normalizeRequestedFileName = (value) => {
   return withoutForbiddenChars.replace(/\.+$/g, '').trim()
 }
 
+const decodeMulterOriginalName = (value) => {
+  const raw = (value || '').toString()
+  if (!raw) return ''
+  try {
+    const decoded = Buffer.from(raw, 'latin1').toString('utf8')
+    if (!decoded || decoded.includes('\uFFFD')) return raw
+    return decoded
+  } catch (error) {
+    return raw
+  }
+}
+
 const parseBooleanFlag = (value) => {
   if (typeof value === 'boolean') return value
   if (typeof value === 'string') {
@@ -609,7 +621,8 @@ app.post('/api', (req, res) => {
       const fallbackExtension = path.extname(req.file.filename).replace('.', '').toLowerCase()
       const requestedFileName = normalizeRequestedFileName(req.body?.fileName)
       const requestedExtension = normalizeRequestedExtension(req.body?.extension)
-      const originalBaseName = normalizeRequestedFileName(req.file.originalname)
+      const decodedOriginalName = decodeMulterOriginalName(req.file.originalname)
+      const originalBaseName = normalizeRequestedFileName(decodedOriginalName)
       const generateName = parseBooleanFlag(req.body?.generateName)
       const extension = requestedExtension || fallbackExtension
       const fileName = generateName
