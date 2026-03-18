@@ -76,6 +76,8 @@ Filename/extension logic:
    - else => use original uploaded filename base;
    - fallback => UUID.
 3. Final stored name: `<baseName>.<extension>`.
+4. If file with same name already exists in target directory, server auto-appends numeric suffix:
+   - `name.ext` -> `name (1).ext` -> `name (2).ext` and so on.
 
 Image post-processing:
 - If MIME is `image/*` and extension is one of `jpg|jpeg|png|webp`, file is resized to fit within `2400x2400` (without enlargement) using `sharp` and saved with quality `90`.

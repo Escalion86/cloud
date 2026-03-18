@@ -248,6 +248,17 @@ const parseBooleanFlag = (value) => {
   return false
 }
 
+const getUniqueFileName = (targetDir, baseName, extension) => {
+  let index = 0
+  while (true) {
+    const suffix = index === 0 ? '' : ` (${index})`
+    const candidateName = `${baseName}${suffix}.${extension}`
+    const candidatePath = path.resolve(targetDir, candidateName)
+    if (!fs.existsSync(candidatePath)) return candidateName
+    index += 1
+  }
+}
+
 const normalizePathSegment = (value) =>
   (value || '').toString().replace(/^\/+|\/+$/g, '')
 
@@ -628,7 +639,6 @@ app.post('/api', (req, res) => {
       const fileName = generateName
         ? uuidv4()
         : requestedFileName || originalBaseName || uuidv4()
-      const finalFileName = `${fileName}.${extension}`
       const allowedExtensions = getAllowedExtensions()
       if (allowedExtensions && !allowedExtensions.has(extension)) {
         fs.unlinkSync(req.file.path)
@@ -670,7 +680,8 @@ app.post('/api', (req, res) => {
         return
       }
       fs.mkdirSync(targetDir, { recursive: true })
-      const destinationPath = path.resolve(targetDir, finalFileName)
+      const uniqueFileName = getUniqueFileName(targetDir, fileName, extension)
+      const destinationPath = path.resolve(targetDir, uniqueFileName)
 
       const isImage = req.file.mimetype.startsWith('image/')
       const canProcessImage = ['jpg', 'jpeg', 'png', 'webp'].includes(extension)
@@ -690,8 +701,8 @@ app.post('/api', (req, res) => {
       }
 
       const storedPath = resolvedDirectory
-        ? `${resolvedDirectory}/${finalFileName}`
-        : finalFileName
+        ? `${resolvedDirectory}/${uniqueFileName}`
+        : uniqueFileName
       const publicBaseUrl = getPublicBaseUrl(req)
       const urlsToSend = [`${publicBaseUrl}/uploads/${storedPath}`]
       console.log('urlsToSend', urlsToSend)
