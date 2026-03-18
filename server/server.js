@@ -30,6 +30,14 @@ const expandOriginEntry = (value) => {
   return [`https://${normalized}`, `http://${normalized}`]
 }
 
+const getPublicBaseUrl = (req) => {
+  const fromEnv = normalizeOrigin(process.env.PUBLIC_BASE_URL)
+  if (fromEnv) return fromEnv
+  const protocol = req?.headers?.['x-forwarded-proto'] || req?.protocol || 'http'
+  const host = req?.headers?.['x-forwarded-host'] || req?.get?.('host') || 'localhost:5000'
+  return normalizeOrigin(`${protocol}://${host}`)
+}
+
 const allowedOrigins = new Set(
   [
     'http://www.xn--80aaennmesfbiiz1a7a.xn--p1ai',
@@ -42,8 +50,7 @@ const allowedOrigins = new Set(
     'https://nrsk.xn--80aaennmesfbiiz1a7a.xn--p1ai',
     'https://www.dev.xn--80aaennmesfbiiz1a7a.xn--p1ai',
     'https://dev.xn--80aaennmesfbiiz1a7a.xn--p1ai',
-    'escalioncloud.ru',
-    'www.escalioncloud.ru',
+    process.env.PUBLIC_BASE_URL,
     'https://artistcrm.ru',
     'https://www.artistcrm.ru',
     'https://actquest.ru',
@@ -203,6 +210,30 @@ const normalizeExtension = (file) => {
     .toLowerCase()
   if (originalExt) return originalExt
   return mimeExtensionMap[file.mimetype] || 'bin'
+}
+
+const normalizeRequestedExtension = (value) => {
+  const normalized = (value || '').toString().trim().replace(/^\./, '').toLowerCase()
+  if (!normalized) return ''
+  return normalized.replace(/[^a-z0-9]/g, '')
+}
+
+const normalizeRequestedFileName = (value) => {
+  const raw = (value || '').toString().trim()
+  if (!raw) return ''
+  const baseName = path.parse(path.basename(raw)).name.trim()
+  if (!baseName) return ''
+  const withoutForbiddenChars = baseName.replace(/[<>:"/\\|?*\u0000-\u001F]/g, '').trim()
+  return withoutForbiddenChars.replace(/\.+$/g, '').trim()
+}
+
+const parseBooleanFlag = (value) => {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    return ['true', '1', 'yes', 'on'].includes(normalized)
+  }
+  return false
 }
 
 const normalizePathSegment = (value) =>
@@ -575,8 +606,16 @@ app.post('/api', (req, res) => {
         return
       }
 
-      const { filename } = req.file
-      const extension = path.extname(filename).replace('.', '').toLowerCase()
+      const fallbackExtension = path.extname(req.file.filename).replace('.', '').toLowerCase()
+      const requestedFileName = normalizeRequestedFileName(req.body?.fileName)
+      const requestedExtension = normalizeRequestedExtension(req.body?.extension)
+      const originalBaseName = normalizeRequestedFileName(req.file.originalname)
+      const generateName = parseBooleanFlag(req.body?.generateName)
+      const extension = requestedExtension || fallbackExtension
+      const fileName = generateName
+        ? uuidv4()
+        : requestedFileName || originalBaseName || uuidv4()
+      const finalFileName = `${fileName}.${extension}`
       const allowedExtensions = getAllowedExtensions()
       if (allowedExtensions && !allowedExtensions.has(extension)) {
         fs.unlinkSync(req.file.path)
@@ -618,7 +657,7 @@ app.post('/api', (req, res) => {
         return
       }
       fs.mkdirSync(targetDir, { recursive: true })
-      const destinationPath = path.resolve(targetDir, filename)
+      const destinationPath = path.resolve(targetDir, finalFileName)
 
       const isImage = req.file.mimetype.startsWith('image/')
       const canProcessImage = ['jpg', 'jpeg', 'png', 'webp'].includes(extension)
@@ -638,9 +677,10 @@ app.post('/api', (req, res) => {
       }
 
       const storedPath = resolvedDirectory
-        ? `${resolvedDirectory}/${filename}`
-        : filename
-      const urlsToSend = [`https://escalioncloud.ru/uploads/${storedPath}`]
+        ? `${resolvedDirectory}/${finalFileName}`
+        : finalFileName
+      const publicBaseUrl = getPublicBaseUrl(req)
+      const urlsToSend = [`${publicBaseUrl}/uploads/${storedPath}`]
       console.log('urlsToSend', urlsToSend)
       sendUploadResponse(req, res, 200, {
         status: 'ok',
