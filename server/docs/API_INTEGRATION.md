@@ -42,7 +42,7 @@ Public static files are exposed by server as:
 - Some routes read params only from query string even when HTTP method is `POST`/`DELETE`.
 - Upload route is `multipart/form-data` with file field name exactly `files`.
 - Upload success response contains both `urls` and `data` with same array value.
-- `noFolders` in `/api/files` is treated as truthy by presence of any non-empty value.
+- `noFolders` in `/api/files` is treated as truthy by any non-empty string value (`0`, `false`, `no` are also truthy here).
 
 ## 6) Endpoints
 
@@ -113,12 +113,21 @@ curl -X POST "http://localhost:5000/api" \
 ```
 
 ### 6.2 List files/folders
-`GET /api/files?directory=<path>&noFolders=<any>&password=<pwd>`
+`GET /api/files?directory=<path>&noFolders=<any-non-empty-string>&password=<pwd>`
 
 Query params:
 - `directory` (required in practice): relative path under uploads
-- `noFolders` (optional): when present/truthy, only files are returned
+- `noFolders` (optional): legacy boolean-like flag with current JS-truthy behavior.
 - `password` optional if header auth used
+
+`noFolders` behavior details (important):
+- If `noFolders` is omitted => returns files and folders.
+- If `noFolders` is an empty string (`noFolders=`) => returns files and folders.
+- If `noFolders` is any non-empty value (`1`, `true`, `0`, `false`, `abc`) => returns only files.
+
+Recommended rule for external clients:
+- Need folders in response: do not send `noFolders`.
+- Need only files: send `noFolders=1` (or any non-empty value, but `1` is explicit).
 
 Success `200`:
 ```json
@@ -138,6 +147,22 @@ cURL:
 ```bash
 curl "http://localhost:5000/api/files?directory=photos/2026" \
   -H "x-api-password: YOUR_PASSWORD"
+```
+
+cURL (only files, hide folders):
+```bash
+curl -G "http://localhost:5000/api/files" \
+  -H "x-api-password: YOUR_PASSWORD" \
+  --data-urlencode "directory=photos/2026" \
+  --data-urlencode "noFolders=1"
+```
+
+Avoid this if you need folders too:
+```bash
+curl -G "http://localhost:5000/api/files" \
+  -H "x-api-password: YOUR_PASSWORD" \
+  --data-urlencode "directory=photos/2026" \
+  --data-urlencode "noFolders=0"
 ```
 
 ### 6.3 Delete file
