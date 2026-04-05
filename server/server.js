@@ -154,7 +154,8 @@ app.use(
       const normalized = normalizeOrigin(origin)
       if (
         allowedOrigins.has(normalized) ||
-        /^http:\/\/localhost:\d+$/i.test(normalized)
+        /^http:\/\/localhost:\d+$/i.test(normalized) ||
+        /^https?:\/\/([a-z0-9-]+\.)*actquest\.ru$/i.test(normalized)
       ) {
         callback(null, true)
         return
