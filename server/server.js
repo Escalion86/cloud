@@ -33,8 +33,10 @@ const expandOriginEntry = (value) => {
 const getPublicBaseUrl = (req) => {
   const fromEnv = normalizeOrigin(process.env.PUBLIC_BASE_URL)
   if (fromEnv) return fromEnv
-  const protocol = req?.headers?.['x-forwarded-proto'] || req?.protocol || 'http'
-  const host = req?.headers?.['x-forwarded-host'] || req?.get?.('host') || 'localhost:5000'
+  const protocol =
+    req?.headers?.['x-forwarded-proto'] || req?.protocol || 'http'
+  const host =
+    req?.headers?.['x-forwarded-host'] || req?.get?.('host') || 'localhost:5000'
   return normalizeOrigin(`${protocol}://${host}`)
 }
 
@@ -55,6 +57,9 @@ const allowedOrigins = new Set(
     'https://www.artistcrm.ru',
     'https://actquest.ru',
     'https://www.actquest.ru',
+    'https://sibercone.ru',
+    'https://www.sibercone.ru',
+    'https://sibercone.escalion.ru',
     'http://localhost:3000',
   ]
     .flatMap(expandOriginEntry)
@@ -206,7 +211,8 @@ const mimeExtensionMap = {
 }
 
 const normalizeExtension = (file) => {
-  const originalExt = path.extname(file.originalname || '')
+  const originalExt = path
+    .extname(file.originalname || '')
     .replace('.', '')
     .toLowerCase()
   if (originalExt) return originalExt
@@ -214,7 +220,11 @@ const normalizeExtension = (file) => {
 }
 
 const normalizeRequestedExtension = (value) => {
-  const normalized = (value || '').toString().trim().replace(/^\./, '').toLowerCase()
+  const normalized = (value || '')
+    .toString()
+    .trim()
+    .replace(/^\./, '')
+    .toLowerCase()
   if (!normalized) return ''
   return normalized.replace(/[^a-z0-9]/g, '')
 }
@@ -224,7 +234,9 @@ const normalizeRequestedFileName = (value) => {
   if (!raw) return ''
   const baseName = path.parse(path.basename(raw)).name.trim()
   if (!baseName) return ''
-  const withoutForbiddenChars = baseName.replace(/[<>:"/\\|?*\u0000-\u001F]/g, '').trim()
+  const withoutForbiddenChars = baseName
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '')
+    .trim()
   return withoutForbiddenChars.replace(/\.+$/g, '').trim()
 }
 
@@ -521,9 +533,7 @@ app.get('/api/dirsize', async (req, res) => {
   try {
     const stats = await fsPromises.stat(targetPath)
     if (!stats.isDirectory()) {
-      res
-        .status(400)
-        .json({ status: 'error', message: 'Not a directory' })
+      res.status(400).json({ status: 'error', message: 'Not a directory' })
       return
     }
     const size = await getDirectorySize(targetPath)
@@ -630,10 +640,17 @@ app.post('/api', (req, res) => {
         return
       }
 
-      const fallbackExtension = path.extname(req.file.filename).replace('.', '').toLowerCase()
+      const fallbackExtension = path
+        .extname(req.file.filename)
+        .replace('.', '')
+        .toLowerCase()
       const requestedFileName = normalizeRequestedFileName(req.body?.fileName)
-      const requestedExtension = normalizeRequestedExtension(req.body?.extension)
-      const decodedOriginalName = decodeMulterOriginalName(req.file.originalname)
+      const requestedExtension = normalizeRequestedExtension(
+        req.body?.extension,
+      )
+      const decodedOriginalName = decodeMulterOriginalName(
+        req.file.originalname,
+      )
       const originalBaseName = normalizeRequestedFileName(decodedOriginalName)
       const generateName = parseBooleanFlag(req.body?.generateName)
       const extension = requestedExtension || fallbackExtension
