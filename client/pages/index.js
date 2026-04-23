@@ -18,6 +18,7 @@ import LoginForm from '../components/LoginForm'
 import SelectFile from '../components/SelectFile'
 import ConfirmModal from '../components/ConfirmModal'
 import PromptModal from '../components/PromptModal'
+import ShareQrModal from '../components/ShareQrModal'
 
 const normalizeBaseUrl = (baseUrl) => {
   if (!baseUrl) return ''
@@ -70,6 +71,13 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
     progress: 0,
     fileName: '',
     message: '',
+  })
+  const [shareState, setShareState] = useState({
+    open: false,
+    link: '',
+    loading: false,
+    qrImageUrl: '',
+    errorMessage: '',
   })
   const [isDragging, setIsDragging] = useState(false)
   const [dragCounter, setDragCounter] = useState(0)
@@ -135,6 +143,14 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
     loadDisk()
   }, [refreshKey])
 
+  useEffect(() => {
+    if (!shareState.qrImageUrl) return undefined
+    const objectUrl = shareState.qrImageUrl
+    return () => {
+      URL.revokeObjectURL(objectUrl)
+    }
+  }, [shareState.qrImageUrl])
+
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
     setIsAuthed(false)
@@ -167,21 +183,101 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
     document.body.removeChild(link)
   }
 
-  const handleShareSelected = async () => {
-    if (!selectedFile || !normalizedFilesBaseUrl) return
-    const url = `${normalizedFilesBaseUrl}/${selectedFile}`
+  const copyTextToClipboard = async (text) => {
     try {
-      await navigator.clipboard.writeText(url)
-      showToast('Ссылка скопирована')
+      await navigator.clipboard.writeText(text)
     } catch (error) {
       const input = document.createElement('input')
-      input.value = url
+      input.value = text
       document.body.appendChild(input)
       input.select()
       document.execCommand('copy')
       document.body.removeChild(input)
-      showToast('Ссылка скопирована')
     }
+  }
+
+  const generateQrCode = async (url) => {
+    setShareState((current) => {
+      if (current.qrImageUrl) {
+        URL.revokeObjectURL(current.qrImageUrl)
+      }
+      return {
+        ...current,
+        open: true,
+        link: url,
+        loading: true,
+        qrImageUrl: '',
+        errorMessage: '',
+      }
+    })
+
+    try {
+      const response = await fetch('/api/qr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.message || 'Не удалось сгенерировать QR-код')
+      }
+
+      const blob = await response.blob()
+      const qrImageUrl = URL.createObjectURL(blob)
+
+      setShareState((current) => ({
+        ...current,
+        loading: false,
+        qrImageUrl,
+        errorMessage: '',
+      }))
+    } catch (error) {
+      setShareState((current) => ({
+        ...current,
+        loading: false,
+        qrImageUrl: '',
+        errorMessage: error.message || 'Не удалось сгенерировать QR-код',
+      }))
+    }
+  }
+
+  const handleShareSelected = async () => {
+    if (!selectedFile || !normalizedFilesBaseUrl) return
+    const url = `${normalizedFilesBaseUrl}/${selectedFile}`
+    await generateQrCode(url)
+  }
+
+  const handleCopyShareLink = async () => {
+    if (!shareState.link) return
+    try {
+      await copyTextToClipboard(shareState.link)
+      showToast('Ссылка скопирована')
+    } catch (error) {
+      showToast('Не удалось скопировать ссылку')
+    }
+  }
+
+  const handleCloseShareModal = () => {
+    setShareState((current) => {
+      if (current.qrImageUrl) {
+        URL.revokeObjectURL(current.qrImageUrl)
+      }
+      return {
+        open: false,
+        link: '',
+        loading: false,
+        qrImageUrl: '',
+        errorMessage: '',
+      }
+    })
+  }
+
+  const handleRetryShareQr = async () => {
+    if (!shareState.link) return
+    await generateQrCode(shareState.link)
   }
 
   const handleCloseSelected = () => {
@@ -707,6 +803,16 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
         onCancel={() =>
           setRenameState((current) => ({ ...current, open: false }))
         }
+      />
+      <ShareQrModal
+        open={shareState.open}
+        link={shareState.link}
+        loading={shareState.loading}
+        qrImageUrl={shareState.qrImageUrl}
+        errorMessage={shareState.errorMessage}
+        onClose={handleCloseShareModal}
+        onCopyLink={handleCopyShareLink}
+        onRetry={handleRetryShareQr}
       />
     </main>
   )
