@@ -61,6 +61,7 @@ const allowedOrigins = new Set(
     'https://www.sibercone.ru',
     'https://sibercone.escalion.ru',
     'http://localhost:3000',
+    'https://partycrm.ru',
   ]
     .flatMap(expandOriginEntry)
     .map(normalizeOrigin),
