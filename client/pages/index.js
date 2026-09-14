@@ -19,6 +19,7 @@ import SelectFile from '../components/SelectFile'
 import ConfirmModal from '../components/ConfirmModal'
 import PromptModal from '../components/PromptModal'
 import ShareQrModal from '../components/ShareQrModal'
+import UsageAudit from '../components/UsageAudit'
 
 const normalizeBaseUrl = (baseUrl) => {
   if (!baseUrl) return ''
@@ -688,6 +689,8 @@ const HomePage = ({ initialAuthed, filesBaseUrl, serverApiUrl }) => {
           sortDir={sortDir}
         />
       </section>
+
+      <UsageAudit />
 
       <section
         className={`${panelClass} fixed bottom-5 left-1/2 w-[min(960px,calc(100%-40px))] -translate-x-1/2 transition ${

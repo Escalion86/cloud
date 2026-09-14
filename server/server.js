@@ -5,6 +5,8 @@ const fs = require('fs')
 const sharp = require('sharp')
 const path = require('path')
 const fsPromises = require('fs').promises
+const { registerUsageRoutes } = require('./usageRegistry')
+const { registerPrivateFileRoutes } = require('./privateFiles')
 
 const { v4: uuidv4 } = require('uuid')
 require('dotenv').config()
@@ -74,14 +76,27 @@ const extractBearerToken = (authorization) => {
   return match ? match[1].trim() : raw
 }
 
+const parseCookie = (cookieHeader, name) => {
+  if (!cookieHeader) return ''
+  const match = cookieHeader
+    .split(';')
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(name + '='))
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : ''
+}
+
 const isAuthorized = (req) => {
+  if (!process.env.PASSWORD) return false
   const authValue =
     req.query.password ||
     req.body?.password ||
     req.headers['x-api-password'] ||
     req.headers['x-token'] ||
     extractBearerToken(req.headers.authorization)
-  return Boolean(process.env.PASSWORD) && authValue === process.env.PASSWORD
+  if (authValue === process.env.PASSWORD) return true
+  const cookieAuthValue = process.env.AUTH_COOKIE_VALUE || 'ok'
+  const cookieValue = parseCookie(req.headers?.cookie, 'cloud_auth')
+  return cookieValue === cookieAuthValue
 }
 
 const getErrorReason = (error, fallback) => {
@@ -148,6 +163,8 @@ app.use(
       'Origin',
       'Cache-Control',
       'Content-Type',
+      'X-Api-Password',
+      'X-Usage-Token',
       // 'X-Token',
       // 'X-Refresh-Token',
     ], // you can change the headers
@@ -180,6 +197,8 @@ app.use(
     preflightContinue: true,
   }),
 ) // Allows incoming requests from any I
+
+app.use(express.json({ limit: '5mb' }))
 
 app.use(function (err, req, res, next) {
   console.error(err.stack)
@@ -562,6 +581,16 @@ app.get('/api/disk', async (req, res) => {
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Error reading disk' })
   }
+})
+
+registerUsageRoutes(app, {
+  isAuthorized,
+  uploadsRoot: path.resolve(__dirname, '../client/uploads'),
+})
+
+registerPrivateFileRoutes(app, {
+  isAuthorized,
+  uploadsRoot: path.resolve(__dirname, '../client/uploads'),
 })
 
 app.post('/api/rename', (req, res) => {

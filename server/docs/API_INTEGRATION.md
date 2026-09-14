@@ -282,3 +282,55 @@ CLOUD_API_PASSWORD=your_password_here
 ## 9) Compatibility notes
 - API currently mixes REST styles (`GET` for file deletion, query params in `POST/DELETE`). External clients should follow the contract exactly.
 - Upload response shape is intentionally non-standard (array body on success). Do not expect `{ status: "ok" }` in upload success body.
+
+## 10) Usage reports
+
+MongoDB-backed registration of projects, full usage snapshots, and storage audit
+are documented in [USAGE_REPORTS.md](./USAGE_REPORTS.md).
+
+## 11) Приватные файлы ArtistCRM
+
+Эти маршруты предназначены только для server-to-server запросов ArtistCRM. Во
+всех запросах, кроме открытия уже подписанной ссылки, обязателен заголовок
+`x-api-password`. Старый `POST /api` остаётся обратно совместимым.
+
+### Загрузка
+
+`POST /api/private-files/upload`, `multipart/form-data`:
+
+- `file` — один файл до 5 МБ;
+- `storageKey` — ключ вида
+  `artistcrm/{tenantId}/events/{eventId}/documents/{uploadId}` либо аналогичный
+  ключ для `clients`;
+- `uploadId` — идентификатор идемпотентности.
+
+Разрешены PDF, DOC/DOCX, XLS/XLSX, CSV, TXT, JPEG, PNG и WebP. Ответ содержит
+`storageKey`, безопасное имя, размер, MIME, SHA-256 checksum и дату создания.
+Повтор того же `uploadId` возвращает прежние метаданные.
+
+### Временная ссылка
+
+`POST /api/private-files/access-url`, JSON:
+
+```json
+{
+  "storageKey": "artistcrm/...",
+  "downloadName": "brief.xlsx",
+  "disposition": "attachment"
+}
+```
+
+Ссылка действует пять минут. Значение `inline` предназначено для PDF и
+изображений, `attachment` — для скачивания остальных файлов.
+
+### Удаление
+
+`DELETE /api/private-files`, JSON:
+
+```json
+{ "storageKey": "artistcrm/...", "deleteId": "uuid" }
+```
+
+Удаление идемпотентно: отсутствующий объект также возвращает успех. Для подписи
+ссылок задайте отдельный `PRIVATE_FILES_SIGNING_SECRET`; при его отсутствии
+временно используется `PASSWORD`.
