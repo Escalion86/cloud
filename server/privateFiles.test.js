@@ -2,15 +2,22 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const {
   MAX_FILE_SIZE,
+  normalizeEntityStorageKey,
   normalizeArtistCrmStorageKey,
   sanitizeName,
   validateFile,
 } = require('./privateFiles')
 
-test('storageKey принимает только tenant-aware ключ ArtistCRM', () => {
+test('storageKey принимает новый ключ Vedelo и legacy-ключ ArtistCRM', () => {
   const valid =
-    'artistcrm/507f1f77bcf86cd799439011/events/507f1f77bcf86cd799439012/documents/upload-1'
-  assert.equal(normalizeArtistCrmStorageKey(valid), valid)
+    'vedelo/507f1f77bcf86cd799439011/events/507f1f77bcf86cd799439012/documents/upload-1'
+  const legacy = valid.replace(/^vedelo\//, 'artistcrm/')
+  const client = valid.replace('/events/', '/clients/')
+  assert.equal(normalizeEntityStorageKey(valid), valid)
+  assert.equal(normalizeEntityStorageKey(client), client)
+  assert.equal(normalizeEntityStorageKey(legacy), legacy)
+  assert.equal(normalizeEntityStorageKey(valid.replace(/^vedelo\//, 'other/')), '')
+  assert.equal(normalizeArtistCrmStorageKey(legacy), legacy)
   assert.equal(normalizeArtistCrmStorageKey(`${valid}/extra`), '')
   assert.equal(normalizeArtistCrmStorageKey('../artistcrm/secret'), '')
   assert.equal(

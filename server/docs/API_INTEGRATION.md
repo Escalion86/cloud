@@ -288,9 +288,9 @@ CLOUD_API_PASSWORD=your_password_here
 MongoDB-backed registration of projects, full usage snapshots, and storage audit
 are documented in [USAGE_REPORTS.md](./USAGE_REPORTS.md).
 
-## 11) Приватные файлы ArtistCRM
+## 11) Приватные файлы Vedelo и legacy ArtistCRM
 
-Эти маршруты предназначены только для server-to-server запросов ArtistCRM. Во
+Эти маршруты предназначены только для server-to-server запросов Vedelo. Во
 всех запросах, кроме открытия уже подписанной ссылки, обязателен заголовок
 `x-api-password`. Старый `POST /api` остаётся обратно совместимым.
 
@@ -300,8 +300,9 @@ are documented in [USAGE_REPORTS.md](./USAGE_REPORTS.md).
 
 - `file` — один файл до 5 МБ;
 - `storageKey` — ключ вида
-  `artistcrm/{tenantId}/events/{eventId}/documents/{uploadId}` либо аналогичный
-  ключ для `clients`;
+  `vedelo/{tenantId}/events/{eventId}/documents/{uploadId}` либо аналогичный
+  ключ для `clients`; legacy-ключи с корнем `artistcrm` продолжают приниматься
+  для чтения и удаления существующих файлов;
 - `uploadId` — идентификатор идемпотентности.
 
 Разрешены PDF, DOC/DOCX, XLS/XLSX, CSV, TXT, JPEG, PNG и WebP. Ответ содержит
@@ -314,7 +315,7 @@ are documented in [USAGE_REPORTS.md](./USAGE_REPORTS.md).
 
 ```json
 {
-  "storageKey": "artistcrm/...",
+  "storageKey": "vedelo/...",
   "downloadName": "brief.xlsx",
   "disposition": "attachment"
 }
@@ -328,7 +329,7 @@ are documented in [USAGE_REPORTS.md](./USAGE_REPORTS.md).
 `DELETE /api/private-files`, JSON:
 
 ```json
-{ "storageKey": "artistcrm/...", "deleteId": "uuid" }
+{ "storageKey": "vedelo/...", "deleteId": "uuid" }
 ```
 
 Удаление идемпотентно: отсутствующий объект также возвращает успех. Для подписи

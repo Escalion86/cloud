@@ -5,6 +5,7 @@ const multer = require('multer')
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ACCESS_URL_TTL_SECONDS = 5 * 60
+const PRIVATE_FILE_STORAGE_PREFIXES = new Set(['vedelo', 'artistcrm'])
 const ALLOWED_TYPES = new Map([
   ['pdf', new Set(['application/pdf'])],
   ['doc', new Set(['application/msword'])],
@@ -32,14 +33,15 @@ const normalizeUploadId = (value) => {
   return /^[a-zA-Z0-9_-]{1,80}$/.test(uploadId) ? uploadId : ''
 }
 
-// ArtistCRM sends a key ending at uploadId (six segments).
-const normalizeArtistCrmStorageKey = (value) => {
+// Vedelo sends a key ending at uploadId (six segments). The artistcrm root is
+// retained for already stored files and signed links created before rebranding.
+const normalizeEntityStorageKey = (value) => {
   const storageKey = String(value || '').trim().replace(/^\/+|\/+$/g, '')
   if (storageKey.includes('..') || /[\\\u0000-\u001f]/.test(storageKey)) return ''
   const segments = storageKey.split('/')
   if (
     segments.length !== 6 ||
-    segments[0] !== 'artistcrm' ||
+    !PRIVATE_FILE_STORAGE_PREFIXES.has(segments[0]) ||
     !/^[a-f0-9]{24}$/i.test(segments[1]) ||
     !['events', 'clients'].includes(segments[2]) ||
     !/^[a-f0-9]{24}$/i.test(segments[3]) ||
@@ -50,6 +52,8 @@ const normalizeArtistCrmStorageKey = (value) => {
   }
   return storageKey
 }
+
+const normalizeArtistCrmStorageKey = normalizeEntityStorageKey
 
 const sanitizeName = (value) => {
   const name = String(value || 'file')
@@ -121,7 +125,7 @@ const registerPrivateFileRoutes = (app, { isAuthorized, uploadsRoot }) => {
         return errorResponse(res, 413, 'FILE_TOO_LARGE', 'Файл не должен превышать 5 МБ')
       }
       if (uploadError) return errorResponse(res, 400, 'FILE_REQUIRED', 'Не удалось принять файл')
-      const storageKey = normalizeArtistCrmStorageKey(req.body?.storageKey)
+      const storageKey = normalizeEntityStorageKey(req.body?.storageKey)
       const uploadId = normalizeUploadId(req.body?.uploadId)
       if (!storageKey) return errorResponse(res, 400, 'STORAGE_KEY_INVALID', 'Некорректный ключ хранения')
       if (!uploadId || !storageKey.endsWith(`/${uploadId}`)) {
@@ -166,7 +170,7 @@ const registerPrivateFileRoutes = (app, { isAuthorized, uploadsRoot }) => {
 
   app.post('/api/private-files/access-url', async (req, res) => {
     if (!isAuthorized(req)) return errorResponse(res, 401, 'UNAUTHORIZED', 'Не авторизован')
-    const storageKey = normalizeArtistCrmStorageKey(req.body?.storageKey)
+    const storageKey = normalizeEntityStorageKey(req.body?.storageKey)
     if (!storageKey) return errorResponse(res, 400, 'STORAGE_KEY_INVALID', 'Некорректный ключ хранения')
     const directory = resolveInside(uploadsRoot, `.private/${storageKey}`)
     const metadata = await readMetadata(directory)
@@ -187,7 +191,7 @@ const registerPrivateFileRoutes = (app, { isAuthorized, uploadsRoot }) => {
   })
 
   app.get('/api/private-files/content', async (req, res) => {
-    const storageKey = normalizeArtistCrmStorageKey(req.query.storageKey)
+    const storageKey = normalizeEntityStorageKey(req.query.storageKey)
     const expires = Number(req.query.expires)
     const disposition = req.query.disposition === 'inline' ? 'inline' : 'attachment'
     const downloadName = sanitizeName(req.query.downloadName)
@@ -209,7 +213,7 @@ const registerPrivateFileRoutes = (app, { isAuthorized, uploadsRoot }) => {
 
   app.delete('/api/private-files', async (req, res) => {
     if (!isAuthorized(req)) return errorResponse(res, 401, 'UNAUTHORIZED', 'Не авторизован')
-    const storageKey = normalizeArtistCrmStorageKey(req.body?.storageKey)
+    const storageKey = normalizeEntityStorageKey(req.body?.storageKey)
     const deleteId = normalizeUploadId(req.body?.deleteId)
     if (!storageKey) return errorResponse(res, 400, 'STORAGE_KEY_INVALID', 'Некорректный ключ хранения')
     if (!deleteId) return errorResponse(res, 400, 'UPLOAD_ID_INVALID', 'Некорректный идентификатор удаления')
@@ -227,6 +231,7 @@ module.exports = {
   ACCESS_URL_TTL_SECONDS,
   MAX_FILE_SIZE,
   buildSignature,
+  normalizeEntityStorageKey,
   normalizeArtistCrmStorageKey,
   registerPrivateFileRoutes,
   sanitizeName,
